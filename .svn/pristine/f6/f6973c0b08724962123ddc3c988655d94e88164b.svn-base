@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.Infra.repairLog.dao.repLogDAO">
+
+	<insert id="insertRepLog" parameterType="repairLogVO">
+		INSERT
+		INTO REPAIR_LOG(
+			RL_NO
+			, RL_DT
+			, RL_SECTION
+			, RL_CONTENT
+			, RL_CRT_TS
+			, RL_UPD_TS
+			, RL_WRITER
+			, RL_FC
+			, RL_IC
+			, RL_IR
+			, RL_IS
+			, RL_IT
+			, RL_REASON
+		) VALUES (
+			'RL' || SCHE_SEQ.NEXTVAL
+			, #{rlDt,jdbcType=DATE}
+			, #{rlSection,jdbcType=VARCHAR}
+			, #{rlContent,jdbcType=VARCHAR}
+			, SYSTIMESTAMP
+			, SYSTIMESTAMP
+			, #{rlWriter,jdbcType=CHAR}
+			, #{rlFc,jdbcType=VARCHAR}
+			, #{rlIc,jdbcType=VARCHAR}
+			, #{rlIr,jdbcType=VARCHAR}
+			, #{rlIs,jdbcType=VARCHAR}
+			, #{rlIt,jdbcType=VARCHAR}
+			, #{rlReason,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<select id="selectRepLogList" parameterType="PaginationInfo" resultType="repairLogVO">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT 
+			RL_NO
+			, RL_DT
+			, RL_SECTION
+			, RL_CONTENT
+			, RL_CRT_TS
+			, RL_UPD_TS
+			, RL_RS_ID
+			, RL_WRITER
+			, EMP_NM "employee.empNm"
+			, RL_IMG
+			, RL_FC
+			, RL_IC
+			, RL_IR
+			, RL_IS
+			, RL_IT
+			, RL_REASON
+			, ZONE_FLOOR "zone.zoneFloor"
+			, ZONE_CTGR "zone.zoneCtgr"
+			, C1.CODE_NM "common.codeNm1"
+			, C2.CODE_NM "common.codeNm2"
+			, FC_NM "facility.fcNm"
+		FROM REPAIR_LOG
+		INNER JOIN ZONE ON (RL_SECTION = ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RL_WRITER = EMP_NO)
+		LEFT JOIN COMMON_CODE C1 ON (RL_IS = C1.CODE_ID)
+		LEFT JOIN COMMON_CODE C2 ON (RL_IR = C2.CODE_ID)
+		LEFT JOIN FACILITY ON (RL_FC = FC_CD)
+		WHERE 1=1
+		<include refid="searchFrag" />
+		 ORDER BY CASE WHEN RL_DT = TRUNC(SYSDATE) THEN 0 ELSE 1 END, RL_DT DESC 
+		) A
+		) B
+	<![CDATA[WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}]]>
+	</select>
+	
+	<select id="selectMNRepLogList" parameterType="PaginationInfo" resultType="repairLogVO">
+			SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT 
+			RL_NO
+			, RL_DT
+			, RL_SECTION
+			, RL_CONTENT
+			, RL_CRT_TS
+			, RL_UPD_TS
+			, RL_RS_ID
+			, RL_WRITER
+			, EMP_NM "employee.empNm"
+			, RL_IMG
+			, RL_FC
+			, RL_IC
+			, RL_IR
+			, RL_IS
+			, RL_IT
+			, RL_REASON
+			, ZONE_FLOOR "zone.zoneFloor"
+			, ZONE_CTGR "zone.zoneCtgr"
+			, C1.CODE_NM "common.codeNm1"
+			, C2.CODE_NM "common.codeNm2"
+			, FC_NM "facility.fcNm"
+		FROM REPAIR_LOG
+		INNER JOIN ZONE ON (RL_SECTION = ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RL_WRITER = EMP_NO)
+		LEFT JOIN COMMON_CODE C1 ON (RL_IS = C1.CODE_ID)
+		LEFT JOIN COMMON_CODE C2 ON (RL_IR = C2.CODE_ID)
+		LEFT JOIN FACILITY ON (RL_FC = FC_CD)
+        WHERE RL_IR = 'NN' AND RL_IS = 'WT'
+		<include refid="searchFrag" />
+		 ORDER BY CASE WHEN RL_DT = TRUNC(SYSDATE) THEN 0 ELSE 1 END, RL_DT DESC 
+		) A
+		) B
+	<![CDATA[WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}]]>
+	</select>
+	
+	
+	<select id="selectMWRepLogList" parameterType="PaginationInfo" resultType="repairLogVO">
+			SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT 
+			RL_NO
+			, RL_DT
+			, RL_SECTION
+			, RL_CONTENT
+			, RL_CRT_TS
+			, RL_UPD_TS
+			, RL_RS_ID
+			, RL_WRITER
+			, EMP_NM "employee.empNm"
+			, RL_IMG
+			, RL_FC
+			, RL_IC
+			, RL_IR
+			, RL_IS
+			, RL_IT
+			, RL_REASON
+			, ZONE_FLOOR "zone.zoneFloor"
+			, ZONE_CTGR "zone.zoneCtgr"
+			, C1.CODE_NM "common.codeNm1"
+			, C2.CODE_NM "common.codeNm2"
+			, FC_NM "facility.fcNm"
+		FROM REPAIR_LOG
+		INNER JOIN ZONE ON (RL_SECTION = ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RL_WRITER = EMP_NO)
+		LEFT JOIN COMMON_CODE C1 ON (RL_IS = C1.CODE_ID)
+		LEFT JOIN COMMON_CODE C2 ON (RL_IR = C2.CODE_ID)
+		LEFT JOIN FACILITY ON (RL_FC = FC_CD)
+		WHERE RL_DT BETWEEN TRUNC(SYSDATE, 'MONTH') AND LAST_DAY(SYSDATE)
+        AND RL_IR = 'WT'
+		<include refid="searchFrag" />
+		 ORDER BY CASE WHEN RL_DT = TRUNC(SYSDATE) THEN 0 ELSE 1 END, RL_DT DESC 
+		) A
+		) B
+	<![CDATA[WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}]]>
+	</select>
+	
+	
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM RNC_REQ
+	</select>
+	
+	<select id="selectRepLog" parameterType="string" resultType="repairLogVO">
+		SELECT 
+			RL_NO
+			, RL_DT
+			, RL_SECTION
+			, RL_CONTENT
+			, RL_CRT_TS
+			, RL_UPD_TS
+			, RL_RS_ID
+			, RL_WRITER
+			, EMP_NM "employee.empNm"
+			, RL_IMG
+			, RL_FC
+			, RL_IC
+			, RL_IR
+			, RL_IS
+			, RL_IT
+			, RL_REASON
+			, ZONE_FLOOR "zone.zoneFloor"
+			, ZONE_CTGR "zone.zoneCtgr"
+			, C1.CODE_NM "common.codeNm1"
+			, C2.CODE_NM "common.codeNm2"
+			, FC_NM "facility.fcNm"
+		FROM REPAIR_LOG
+		INNER JOIN ZONE ON (RL_SECTION = ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RL_WRITER = EMP_NO)
+		LEFT JOIN COMMON_CODE C1 ON (RL_IS = C1.CODE_ID)
+		LEFT JOIN COMMON_CODE C2 ON (RL_IR = C2.CODE_ID)
+		LEFT JOIN FACILITY ON (RL_FC = FC_CD)
+		WHERE RL_NO = #{rlNo}
+	</select>
+	
+	<sql id="searchFrag">
+			<if
+				test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'name'">
+						AND ( INSTR(RL_IT, #{simpleCondition.searchWord}) > 0)
+					</when>
+					<when test="simpleCondition.searchType eq 'loc'">
+						AND ( EXISTS (
+						SELECT 1
+						FROM ZONE
+						WHERE
+						INSTR(ZONE_FLOOR || '층 ' ||ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+						AND ZONE_CD = RL_SECTION
+						) )
+					</when>
+					<when test="simpleCondition.searchType eq 'obj'">
+						AND ( EXISTS (SELECT 1 FROM FACILITY WHERE INSTR(FC_NM, #{simpleCondition.searchWord}) > 0 AND FACILITY.FC_NM=RL_FC))
+					</when>
+					<when test="simpleCondition.searchType eq 'ir'">
+						AND ( INSTR(RL_IR, #{simpleCondition.searchWord}) > 0 )
+					</when>
+					<otherwise>
+						AND ( INSTR(RL_IT, #{simpleCondition.searchWord}) > 0
+						OR
+						EXISTS (
+						SELECT 1
+						FROM ZONE
+						WHERE
+						INSTR(ZONE_FLOOR || '층 ' ||ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+						AND ZONE_CD = RL_SECTION
+						)
+						OR
+						EXISTS (SELECT 1 FROM FACILITY WHERE INSTR(FC_NM, #{simpleCondition.searchWord}) > 0 AND FACILITY.FC_NM=RL_FC)
+						OR 
+						INSTR(RL_IR, #{simpleCondition.searchWord}) > 0 )
+					</otherwise>
+				</choose>
+			</if>
+	</sql>
+	
+	<select id="modalRepLogList" resultType="repairLogVO">
+		SELECT 
+			RL_NO
+			, RL_DT
+			, RL_SECTION
+			, RL_CONTENT
+			, RL_CRT_TS
+			, RL_UPD_TS
+			, RL_RS_ID
+			, RL_WRITER
+			, EMP_NM "employee.empNm"
+			, RL_IMG
+			, RL_FC
+			, RL_IC
+			, RL_IR
+			, RL_IS
+			, RL_IT
+			, RL_REASON
+			, ZONE_FLOOR "zone.zoneFloor"
+			, ZONE_CTGR "zone.zoneCtgr"
+			, C1.CODE_NM "common.codeNm1"
+			, C2.CODE_NM "common.codeNm2"
+			, FC_NM "facility.fcNm"
+		FROM REPAIR_LOG
+		INNER JOIN ZONE ON (RL_SECTION = ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RL_WRITER = EMP_NO)
+		LEFT JOIN COMMON_CODE C1 ON (RL_IS = C1.CODE_ID)
+		LEFT JOIN COMMON_CODE C2 ON (RL_IR = C2.CODE_ID)
+		LEFT JOIN FACILITY ON (RL_FC = FC_CD)
+		WHERE RL_IR = 'NN' AND RL_IS = 'WT'
+	</select>
+
+	<select id="monthRepLog" resultType="repairLogVO"
+		parameterType="string">
+		SELECT
+		(SELECT COUNT(*)
+		FROM repair_log
+		WHERE RL_DT BETWEEN TO_DATE(#{month}, 'YYYY-MM-DD') AND
+		LAST_DAY(TO_DATE(#{month}, 'YYYY-MM-DD'))) T_CNT
+		,(SELECT COUNT(*)
+		FROM repair_log
+		WHERE RL_DT BETWEEN TO_DATE(#{month}, 'YYYY-MM-DD') AND
+		LAST_DAY(TO_DATE(#{month}, 'YYYY-MM-DD'))
+		AND RL_IR = 'SS') S_CNT
+		,(SELECT COUNT(*)
+		FROM repair_log
+		WHERE RL_DT BETWEEN TO_DATE(#{month}, 'YYYY-MM-DD') AND
+		LAST_DAY(TO_DATE(#{month}, 'YYYY-MM-DD'))
+		AND RL_IR = 'NN') N_CNT
+		,(SELECT COUNT(*)
+		FROM repair_log
+		WHERE RL_DT BETWEEN TO_DATE(#{month}, 'YYYY-MM-DD') AND
+		LAST_DAY(TO_DATE(#{month}, 'YYYY-MM-DD'))
+		AND RL_IR = 'WT') WT_CNT
+		from dual
+	</select>
+
+	<update id="updateLogStatus" parameterType="repairLogVO">
+		UPDATE REPAIR_LOG
+		SET 
+			RL_IR = #{rlIr, jdbcType=VARCHAR},
+			RL_IS = #{rlIs, jdbcType=VARCHAR}
+		WHERE RL_NO = #{rlNo}
+	</update>
+
+	<select id="getRepChart" parameterType="string"
+		resultType="repairLogVO">
+		SELECT 'ssall' AS rep_chart, COUNT(*) AS rep_charnm FROM REPAIR_LOG WHERE RL_IR = 'SS'
+		UNION ALL
+		SELECT 'nnall', COUNT(*) FROM REPAIR_LOG WHERE RL_IR = 'NN'
+		UNION ALL
+		SELECT 'wtall', COUNT(*) FROM REPAIR_LOG WHERE RL_IR = 'WT'
+		UNION ALL
+		SELECT 'fss', COUNT(*) FROM REPAIR_LOG WHERE RL_FC = #{rlFc} AND RL_IR = 'SS'
+		UNION ALL
+		SELECT 'fnn', COUNT(*) FROM REPAIR_LOG WHERE RL_FC = #{rlFc} AND RL_IR = 'NN'
+		UNION ALL
+		SELECT 'fwt', COUNT(*) FROM REPAIR_LOG WHERE RL_FC = #{rlFc} AND RL_IR = 'WT'
+	</select>
+	
+</mapper>

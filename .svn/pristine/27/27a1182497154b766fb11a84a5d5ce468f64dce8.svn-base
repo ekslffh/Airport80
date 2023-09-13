@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.hr.empBrd.dao.EmpbrdDAO">
+   <sql id="searchFrag">
+      <where>
+           <if test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+              <choose>
+                 <when test="simpleCondition.searchType eq 'writer'">
+                    INSTR(EMP_NO, #{simpleCondition.searchWord}) > 0
+                 </when>
+                 <when test="simpleCondition.searchType eq 'title'">
+                    INSTR(EB_TITLE, #{simpleCondition.searchWord}) > 0
+                 </when>
+                 <otherwise>
+                    INSTR(EMP_NO, #{simpleCondition.searchWord}) > 0
+                    OR
+                    INSTR(EB_TITLE, #{simpleCondition.searchWord}) > 0
+                 </otherwise>
+              </choose>
+           </if>
+        </where>
+   </sql>
+
+   <select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.vo.PaginationInfo">
+      SELECT COUNT(*)
+      FROM EMP_BRD
+      <include refid="searchFrag" />
+   </select>
+   
+   <resultMap type="kr.or.ddit.hr.vo.EmpbrdVO" id="ebListMap" autoMapping="true">
+   		<id property="ebNo" column="EB_NO" />
+   		<result property="atchFileId" column="EB_ATCH_FILE" />
+   		<association property="employee" javaType="kr.or.ddit.common.vo.EmployeeVO" autoMapping="true" />
+   </resultMap>
+   
+   <select id="selectEmpbrdList" resultMap="ebListMap" parameterType="kr.or.ddit.vo.PaginationInfo">
+      SELECT B.*, E.EMP_NM
+		FROM (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+		        SELECT
+		            EB_NO, EB_TITLE, EMP_NO, EB_CRT_DT, EB_VWS
+		        FROM EMP_BRD 
+		        <include refid="searchFrag" />
+		        ORDER BY EB_NO DESC
+		    ) A
+		) B
+		JOIN EMPLOYEE E ON B.EMP_NO = E.EMP_NO
+      <![CDATA[   
+      WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+      ]]>
+   </select>
+   
+   <resultMap type="kr.or.ddit.hr.vo.EmpbrdVO" id="ebPubListMap" autoMapping="true">
+   		<id property="ebNo" column="EB_NO" />
+   		<association property="employee" javaType="kr.or.ddit.common.vo.EmployeeVO" autoMapping="true" />
+   </resultMap>
+   
+   <select id="selectEbpubList" resultMap="ebPubListMap">
+		SELECT B.*, E.EMP_NM
+		FROM (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+		        select * 
+                from emp_brd 
+                <![CDATA[
+                where eb_pub = 'Y' and rownum <=3
+                ]]>
+                order by  eb_no desc
+		    ) A
+		) B
+		JOIN EMPLOYEE E ON B.EMP_NO = E.EMP_NO
+   </select>
+   
+   <resultMap type="kr.or.ddit.hr.vo.EmpbrdVO" id="empbrdMap" autoMapping="true">
+      <id property="ebNo" column="EB_NO" />
+      <association property="fileGroup" javaType="kr.or.ddit.atch.vo.AtchFileVO">
+         <id property="atchFileId" column="ATCH_FILE_ID"/>
+         <result property="creatDt" column="CREAT_DT"/>
+         <result property="useAt" column="USE_AT"/>
+         <collection property="detailList" ofType="kr.or.ddit.atch.vo.AtchFileDetailVO" autoMapping="true">
+            <id property="atchFileId" column="ATCH_FILE_ID"/>
+            <id property="fiSn" column="FI_SN"/>
+         </collection>
+      </association>
+   </resultMap>
+   
+   <select id="selectEmpbrd" resultMap="empbrdMap">
+   	  WITH ATCH_FILE_VIEW AS(
+		    SELECT *
+		    FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL 
+		            USING (ATCH_FILE_ID)
+		)
+      SELECT
+          EB_NO,
+          EB_TITLE,
+          EB_CONTENT,
+          EB_IMG,
+          EB_CRT_DT,
+          EB_UPD_DT,
+          EB_VWS,
+          EB_PUB,
+          EB_ATCH_FILE,
+          EB.EMP_NO,
+          EMP.EMP_NM 
+          , ATCH_FILE_ID, FI_SN, FI_COURS
+		  , FI_EXTSN, FI_ORIGIN_NM, FI_NM 
+		  , FI_SIZE, FI_MIME
+	      , CREAT_DT, USE_AT
+      FROM EMP_BRD EB
+      LEFT OUTER JOIN ATCH_FILE_VIEW ON (EB_ATCH_FILE = ATCH_FILE_ID)
+      INNER JOIN
+          EMPLOYEE EMP ON EB.EMP_NO = EMP.EMP_NO
+      WHERE
+          EB_NO = #{ebNo}
+   </select>
+
+   
+   <insert id="insertEmpbrd" parameterType="kr.or.ddit.hr.vo.EmpbrdVO">
+      <selectKey order="BEFORE" keyProperty="ebNo" resultType="integer">
+         SELECT EMP_BRD_SEQ.NEXTVAL
+         FROM DUAL
+      </selectKey>
+      INSERT INTO EMP_BRD
+      (
+         EB_NO
+            , EB_TITLE
+            , EB_CONTENT
+            , EB_PUB
+            , EMP_NO
+            , EB_ATCH_FILE
+      )VALUES(
+          #{ebNo,jdbcType=NUMERIC}
+            , #{ebTitle,jdbcType=VARCHAR}
+            , #{ebContent,jdbcType=VARCHAR}
+            , #{ebPub,jdbcType=VARCHAR}
+            , #{empNo,jdbcType=CHAR}
+            , #{atchFileId,jdbcType=CHAR}
+      )
+   </insert>
+   
+   <delete id="deleteEmpbrd" parameterType="int">
+      DELETE FROM EMP_BRD
+      WHERE EB_NO = #{ebNo, jdbcType=INTEGER}
+   </delete>
+   
+   <update id="updateEmpbrd" parameterType="kr.or.ddit.hr.vo.EmpbrdVO">
+      
+      UPDATE EMP_BRD
+      SET
+         EB_NO = #{ebNo, jdbcType=NUMERIC}
+         , EB_TITLE = #{ebTitle, jdbcType=VARCHAR}
+         , EB_ATCH_FILE = #{atchFileId,jdbcType=CHAR}
+         , EB_PUB = #{ebPub, jdbcType=CHAR}
+         , EB_UPD_DT = SYSDATE
+        
+      WHERE EB_NO = #{ebNo}
+   </update>
+   
+<!--    조회수 증가  -->
+   <update id="increaseViews" parameterType="int">
+      UPDATE EMP_BRD
+      SET
+          EB_VWS = EB_VWS+1
+      WHERE
+           EB_NO = #{ebNo}
+   </update>
+   
+   
+</mapper>

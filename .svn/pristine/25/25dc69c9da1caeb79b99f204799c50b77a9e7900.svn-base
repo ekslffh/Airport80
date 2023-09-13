@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.lostItem.dao.CommonDAO">
+	<select id="selectCommonList" resultType="CommonCodeVO">
+		SELECT CODE_ID, CODE_NM
+		FROM COMMON_CODE
+		WHERE CODE_ID LIKE 'LI%'
+	</select>
+
+	<select id="selectStatusList" resultType="CommonCodeVO">
+		SELECT CODE_ID, CODE_NM
+		FROM COMMON_CODE
+		WHERE CODE_INFO LIKE '분실물%'
+	</select>
+
+
+
+</mapper>

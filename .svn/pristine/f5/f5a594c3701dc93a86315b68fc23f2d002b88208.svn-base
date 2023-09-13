@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.contract.dao.ContractHistoryDAO">
+	<select id="selectList">
+		WITH ATCH_FILE_VIEW AS(
+		    SELECT *
+		    FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL 
+		            USING (ATCH_FILE_ID)
+		) 
+		SELECT 
+		    CH_ID, CH_AMT, CH_DOC, CH_START_DT, CH_END_DT, CH_CRT_TS, CTR_ID
+		    , ATCH_FILE_ID, FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE, FI_MIME
+		    , CREAT_DT, USE_AT
+		FROM CONTRACT_HISTORY
+		    LEFT OUTER JOIN 
+		    ATCH_FILE_VIEW ON (CH_DOC = ATCH_FILE_ID)
+	</select>
+	
+	<select id="selctOne">
+		WITH ATCH_FILE_VIEW AS(
+		    SELECT *
+		    FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL 
+		            USING (ATCH_FILE_ID)
+		) 
+		SELECT 
+		    CH_ID, CH_AMT, CH_DOC, CH_START_DT, CH_END_DT, CH_CRT_TS, CTR_ID
+		    , ATCH_FILE_ID, FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE, FI_MIME
+		    , CREAT_DT, USE_AT
+		FROM CONTRACT_HISTORY
+		    LEFT OUTER JOIN 
+		    ATCH_FILE_VIEW ON (CH_DOC = ATCH_FILE_ID)
+   		WHERE CH_ID = #{chId}
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO CONTRACT_HISTORY (
+		    CH_ID
+		    , CH_AMT
+		    , CH_DOC
+		    , CH_START_DT
+		    , CH_END_DT
+		    , CH_CRT_TS
+		    , CTR_ID
+		) VALUES (
+		    #{chId, jdbcType=VARCHAR}
+		    , #{chAmt, jdbcType=NUMERIC}
+		    , #{chDoc, jdbcType=VARCHAR}
+		    , #{chStartDt, jdbcType=DATE}
+		    , #{chEndDt, jdbcType=DATE}
+		    , SYSTIMESTAMP
+		    , #{ctrId, jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE CONTRACT_HISTORY
+		SET
+		    CH_AMT = #{chAmt, jdbcType=NUMERIC}
+		    , CH_DOC = #{chDoc, jdbcType=VARCHAR}
+		    , CH_START_DT = #{chStartDt, jdbcType=DATE}
+		    , CH_END_DT = #{chEndDt, jdbcType=DATE}
+		    , CTR_ID = #{ctrId, jdbcType=VARCHAR}
+		WHERE
+		    CH_ID = #{chId, jdbcType=VARCHAR}
+	</update>
+	
+	<delete id="delete">
+		DELETE FROM CONTRACT_HISTORY
+		WHERE
+			CH_ID = #{chId, jdbcType=VARCHAR}
+	</delete>
+</mapper>

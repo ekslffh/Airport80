@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.common.chat.dao.ChatRoomDAO">
+
+   <resultMap type="ChatRoomVO" id="chatRoomMap" autoMapping="true">
+      <id property="chrId" column="CHR_ID" />
+      <collection property="chatRoomMembers" ofType="ChatRoomMemberVO">
+         <id property="chrId" column="CHR_ID" />
+         <id property="empNo" column="EMP_NO" />
+         <association property="employee" javaType="EmployeeVO" autoMapping="true">
+         	<id property="empNo" column="EMP_NO" />
+         	<association property="fileGroup" javaType="AtchFileVO">
+				<id property="atchFileId" column="ATCH_FILE_ID" />
+				<result property="creatDt" column="CREAT_DT" />
+				<result property="useAt" column="USE_AT" />
+				<collection property="detailList"
+					ofType="AtchFileDetailVO" autoMapping="true">
+					<id property="atchFileId" column="ATCH_FILE_ID" />
+					<id property="fiSn" column="FI_SN" />
+				</collection>
+			</association>
+			<association property="department" javaType="DepartmentVO" autoMapping="true" />
+         </association>
+      </collection>
+   </resultMap>
+
+   <select id="selectListByEmp" resultMap="chatRoomMap">
+   	 WITH ATCH_FILE_VIEW AS (
+		SELECT * FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL USING (ATCH_FILE_ID)
+	  )
+      SELECT
+          CHR_ID, CHR_NM, CHR_CRT_TS, CHR_DEL, CHR_EMP
+          , EMP_NO, CHM_PTC_TS
+          , ATCH_FILE_ID, CREAT_DT, USE_AT
+		  , FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE
+      FROM CHAT_ROOM
+      INNER JOIN CHAT_ROOM_MEMBER USING (CHR_ID)
+      INNER JOIN EMPLOYEE USING (EMP_NO)
+      LEFT OUTER JOIN ATCH_FILE_VIEW ON (ATCH_FILE_ID = EMP_ATCH_FILE)
+      WHERE 
+         CHR_ID IN (SELECT CHR_ID FROM CHAT_ROOM_MEMBER WHERE EMP_NO = #{empNo})
+         AND CHR_DEL IS NULL
+   </select>
+   
+   <select id="selectRoomDetail" resultMap="chatRoomMap">
+		SELECT
+		    CHR_ID, CHR_NM, CHR_CRT_TS, CHR_DEL, CHR_EMP
+		    , EMP_NO, CHM_PTC_TS
+		    , EMP_NM, EMP_BIR, EMP_GENDER
+		    , EMP_EMAIL, EMP_ADDR, EMP_CONTACT
+		    , EMP_STATUS, EMP_JOIN_DT, EMP_RESIGN_DT
+		    , EMP_CRT_DT, EMP_UPD_DT, EMP_DEPT_NO
+		    , EMP_ROLE_NM, DEPT_NM
+		FROM CHAT_ROOM
+		INNER JOIN CHAT_ROOM_MEMBER USING (CHR_ID)
+		INNER JOIN EMPLOYEE USING (EMP_NO)
+		INNER JOIN DEPARTMENT ON (EMP_DEPT_NO = DEPT_NO)
+		WHERE CHR_ID = #{chrId}
+	</select>
+   
+   <insert id="insertChatRoom" parameterType="ChatRoomVO">
+      INSERT INTO CHAT_ROOM (
+         CHR_ID
+         , CHR_NM
+         , CHR_EMP
+      ) VALUES (
+         #{chrId, jdbcType=VARCHAR}
+         , #{chrNm, jdbcType=VARCHAR}
+         , #{chrEmp, jdbcType=CHAR}
+      )
+   </insert>
+   
+   <update id="deleteChatRoomById">
+      UPDATE CHAT_ROOM
+      SET CHR_DEL = 'Y'
+      WHERE CHR_ID = #{chrId}
+   </update>
+   
+</mapper>

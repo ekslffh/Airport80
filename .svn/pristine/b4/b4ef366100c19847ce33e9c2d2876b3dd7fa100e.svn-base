@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.safety.confiscationInfo.dao.ConfiscationInfoDAO">
+
+	<sql id="searchFrag">
+		<where>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'writer'">
+						INSTR(CI_GUBUN, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'title'">
+						INSTR(CI_CARRY_BAN, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'content'">
+						INSTR(CI_NO, #{simpleCondition.searchWord}) >
+						0
+					</when>
+					<otherwise>
+						INSTR(CI_GUBUN, #{simpleCondition.searchWord}) > 0
+						or
+						INSTR(CI_CARRY_BAN, #{simpleCondition.searchWord}) > 0
+						or
+						INSTR(CI_NO, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+
+	<select id="selectTotalRecord" resultType="long" parameterType="PaginationInfo">
+		select COUNT(*)
+		FROM CONFISCATION_INFO
+		<include refid="searchFrag" />
+	</select>
+
+
+	<select id="selectConfisInfoList" resultType="ConfiscationInfoVO">
+		SELECT B.*
+		FROM(
+		SELECT ROWNUM RNUM, A.*
+		FROM(
+		SELECT
+		    CI_NO,
+		    CI_GUBUN,
+		    CI_CARRY_BAN,
+		    CI_CABIN,
+		    CI_TRUST
+		FROM
+		    CONFISCATION_INFO
+		<!-- 동적인 쿼리 -->
+		<include refid="searchFrag" />
+		ORDER BY CI_NO ASC
+		) A
+		)B
+			<![CDATA[ 
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+			]]>
+	</select>
+	
+	<select id="selectLiquidList" resultType="LiquidVO">
+		SELECT
+		    liquid,
+		    liquid_kind
+		FROM
+		    liquid
+	</select>
+	
+	<select id="selectConfisInfo" resultType="ConfiscationInfoVO">
+	SELECT
+	    ci_no,
+	    ci_gubun,
+	    ci_carry_ban,
+	    ci_cabin,
+	    ci_trust
+	FROM
+	    confiscation_info
+	WHERE ci_no = #{ciNo}
+	</select>
+	
+
+	<delete id="deleteConfisInfo" parameterType="int">
+	 DELETE 
+	 FROM confiscation_info
+	 WHERE ci_no = #{ciNo}
+	</delete>
+	
+	<insert id="insertConfisInfo" parameterType="ConfiscationInfoVO">
+	 <selectKey order="BEFORE" resultType="int" keyProperty="ciNo">
+        select CI_NO_SEQ.NEXTVAL from dual
+     </selectKey>
+	
+	INSERT INTO confiscation_info (
+	    ci_no,
+	    ci_gubun,
+	    ci_carry_ban,
+	    ci_cabin,
+	    ci_trust
+	) VALUES (
+	      #{ciNo,jdbcType=NUMERIC}
+		, #{ciGubun,jdbcType=VARCHAR}
+		, #{ciCarryBan,jdbcType=VARCHAR}
+		, #{ciCabin,jdbcType=CHAR}
+		, #{ciTrust,jdbcType=CHAR}
+	 
+	)
+	</insert>
+	
+	<update id="updateConfisInfo" parameterType="ConfiscationInfoVO">
+	UPDATE confiscation_info
+		SET
+		  CI_NO = #{ciNo, jdbcType=NUMERIC}
+		, CI_GUBUN = #{ciGubun, jdbcType=VARCHAR}
+		, CI_CARRY_BAN = #{ciCarryBan, jdbcType=VARCHAR}
+		, CI_CABIN = #{ciCabin, jdbcType=CHAR}
+		, CI_TRUST = #{ciTrust, jdbcType=CHAR}
+		WHERE ci_no = #{ciNo}
+	</update>
+
+
+</mapper>

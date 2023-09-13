@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.Infra.supplier.dao.SupplierDAO">
+
+<sql id="searchFrag">
+        	<if test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+      			AND
+	        	<choose>
+	        		<when test="simpleCondition.searchType eq 'id'">
+	        			INSTR(SPR_ID, #{simpleCondition.searchWord}) > 0
+	        		</when>
+	        		<when test="simpleCondition.searchType eq 'name'">
+	        			INSTR(SPR_NM, #{simpleCondition.searchWord}) > 0
+	        		</when>
+	        		<when test="simpleCondition.searchType eq 'status'">
+	        			INSTR(SPR_STATUS, #{simpleCondition.searchWord}) > 0
+	        		</when>
+	        		<when test="simpleCondition.searchType eq 'category'">
+	        			 EXISTS (SELECT 1 FROM COMMON_CODE WHERE INSTR(CODE_NM, #{simpleCondition.searchWord}) > 0 AND COMMON_CODE.CODE_ID = SUPPLIER.SPR_GU)
+	        		</when>
+	        		<otherwise>
+		        		INSTR(SPR_ID, #{simpleCondition.searchWord}) > 0
+		        		OR
+		        		INSTR(SPR_NM, #{simpleCondition.searchWord}) > 0
+		        		OR
+		        		INSTR(SPR_STATUS, #{simpleCondition.searchWord}) > 0
+		        		OR
+	        			 EXISTS (SELECT 1 FROM COMMON_CODE WHERE INSTR(CODE_NM, #{simpleCondition.searchWord}) > 0 AND COMMON_CODE.CODE_ID = SUPPLIER.SPR_GU)
+	        		</otherwise>
+	        	</choose>
+        	</if>
+	</sql>
+
+<select id="selectTotalRecord" resultType="long" parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM SUPPLIER
+		WHERE 1 = 1 
+		<include refid="searchFrag" />
+</select>
+
+
+
+<select id="allOcList" resultType="supplierVO" parameterType="PaginationInfo">
+SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+SELECT
+    SPR_ID,
+    SPR_NM,
+    CODE_NM "commonCode.codeNm",
+    SPR_CONTACT,
+    SPR_STATUS
+FROM
+    SUPPLIER INNER JOIN COMMON_CODE ON (SPR_GU = CODE_ID) 
+WHERE 
+	SPR_TYPE='OC'
+<include refid="searchFrag" />
+		ORDER BY SPR_ID ASC
+		) A
+		) B
+		<![CDATA[   
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+</select>
+
+<select id="allCcList" resultType="supplierVO" parameterType="PaginationInfo">
+    SELECT B.*
+    FROM (
+        SELECT ROWNUM RNUM, A.*
+        FROM (
+            SELECT
+                SPR_ID,
+                SPR_NM,
+                CODE_NM "commonCode.codeNm",
+                SPR_CONTACT,
+                SPR_STATUS,
+                SPR_TYPE
+            FROM
+                SUPPLIER INNER JOIN COMMON_CODE ON (SPR_GU = CODE_ID) 
+            WHERE 
+                SPR_TYPE='CC'
+                <include refid="searchFrag" />
+            ORDER BY SPR_ID ASC
+        ) A
+    ) B
+    <![CDATA[   
+    WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+    ]]>
+</select>
+
+
+<select id="selectOne" resultType="supplierVO">
+  SELECT
+    SPR_ID,
+    SPR_NM,
+    SPR_GU,
+    SPR_TYPE,
+    CODE_NM "commonCode.codeNm",
+    SPR_CONTACT,
+    SPR_ADDR,
+    SPR_NUM,
+    SPR_EMAIL,
+    SPR_STATUS,
+    CTR_ID
+  FROM
+   SUPPLIER INNER JOIN COMMON_CODE ON (SPR_GU = CODE_ID) 
+  WHERE 
+   SPR_ID = #{sprId}
+</select>
+
+
+
+<select id="selectCc" resultType="supplierVO">
+  SELECT
+    SPR_ID,
+    SPR_NM,
+    SPR_GU,
+    SPR_TYPE,
+    CODE_NM "commonCode.codeNm",
+    SPR_CONTACT,
+    SPR_ADDR,
+    SPR_NUM,
+    SPR_EMAIL,
+    SPR_STATUS,
+    CTR_ID
+  FROM
+   SUPPLIER INNER JOIN COMMON_CODE ON (SPR_GU = CODE_ID) 
+  WHERE 
+   SPR_ID = #{sprId} 
+</select>
+
+
+
+<insert id="insertSupplier" parameterType="supplierVO">
+
+	<selectKey order="BEFORE" resultType="string" keyProperty="sprId">
+	SELECT #{sprGu} || LPAD(NVL(TO_NUMBER(SUBSTR(MAX(SPR_ID), 6)), 0) + 1, 3, '0')
+	FROM SUPPLIER
+	WHERE SPR_GU= #{sprGu}
+	</selectKey>
+
+INSERT INTO SUPPLIER (
+    SPR_ID,
+    SPR_TYPE,
+    SPR_NM,
+    SPR_CONTACT,
+    SPR_ADDR,
+    SPR_EMAIL,
+    SPR_STATUS,
+    CTR_ID,
+    SPR_NUM,
+    SPR_GU
+) VALUES (
+  #{sprId,jdbcType=VARCHAR}
+, #{sprType,jdbcType=VARCHAR}
+, #{sprNm,jdbcType=VARCHAR}
+, #{sprContact,jdbcType=VARCHAR}
+, #{sprAddr,jdbcType=VARCHAR}
+, #{sprEmail,jdbcType=VARCHAR}
+, #{sprStatus,jdbcType=VARCHAR}
+, #{ctrId,jdbcType=VARCHAR}
+, #{sprNum,jdbcType=VARCHAR}
+, #{sprGu,jdbcType=VARCHAR}
+)
+</insert>
+
+
+<update id="updateSupplier" parameterType="supplierVO">
+UPDATE SUPPLIER
+SET
+	SPR_TYPE =  #{sprType,jdbcType=VARCHAR},
+    SPR_NM =   #{sprNm,jdbcType=VARCHAR},
+    SPR_CONTACT =  #{sprContact,jdbcType=VARCHAR},
+    SPR_ADDR =#{sprAddr,jdbcType=VARCHAR},
+    SPR_EMAIL = #{sprEmail,jdbcType=VARCHAR},
+    SPR_STATUS =#{sprStatus,jdbcType=VARCHAR},
+    CTR_ID = #{ctrId,jdbcType=VARCHAR},
+    SPR_NUM =#{sprNum,jdbcType=VARCHAR},
+    SPR_GU =#{sprGu,jdbcType=VARCHAR}
+WHERE SPR_ID = #{sprId}
+</update>
+
+<select id="selectSupplier" resultType="supplierVO" >
+	SELECT 
+		SPR_GU,
+		SPR_NM,
+		SPR_ID
+	FROM
+	    SUPPLIER 
+	WHERE 
+		SPR_TYPE='OC'
+</select>
+
+<select id="selectSupplierById" resultType="supplierVO" >
+	SELECT 
+		SPR_Id,
+		SPR_NM
+	FROM
+	    SUPPLIER 
+	WHERE 
+		SPR_TYPE='OC'
+</select>
+</mapper>

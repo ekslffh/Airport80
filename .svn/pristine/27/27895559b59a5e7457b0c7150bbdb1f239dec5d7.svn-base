@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.safety.prohibitedPerson.dao.ProhibitedPersonDAO">
+
+	<select id="selectEnterPersonList"
+		resultType="ProhibitedPersonVO">
+		SELECT
+		pp_pno,
+		pp_nm,
+		pp_res,
+		pp_per,
+		pp_ww
+		FROM
+		prohibited_person
+		WHERE pp_ww= 'in'
+	</select>
+
+
+	<select id="selectExitPersonList"
+		resultType="ProhibitedPersonVO">
+		SELECT
+		pp_pno,
+		pp_nm,
+		pp_res,
+		pp_per,
+		pp_ww
+		FROM
+		prohibited_person
+		WHERE pp_ww= 'out'
+	</select>
+
+	<select id="selectPPerson" parameterType="String">
+		SELECT
+		pp_pno,
+		pp_nm,
+		pp_res,
+		pp_per,
+		pp_ww
+		FROM
+		prohibited_person
+		WHERE pp_pno= #{ppPno}
+	</select>
+
+	<delete id="deletePPerson" parameterType="String">
+		DELETE
+		FROM prohibited_person
+		WHERE pp_pno = #{ppPno}
+	</delete>
+	
+	<insert id="insertPPerson" parameterType="ProhibitedPersonVO">
+		INSERT INTO prohibited_person (
+		    pp_pno,
+		    pp_nm,
+		    pp_res,
+		    pp_per,
+		    pp_ww
+		) VALUES (
+		      #{ppPno, jdbcType=VARCHAR}
+			, #{ppNm, jdbcType=VARCHAR}
+			, #{ppRes, jdbcType=VARCHAR}
+			, #{ppPer, jdbcType=DATE}
+			, #{ppWw, jdbcType=VARCHAR}
+		)
+		
+	</insert>
+	
+	<update id="updatePPerson" parameterType="ProhibitedPersonVO">
+	UPDATE prohibited_person
+		SET
+		  PP_NM = #{ppNm, jdbcType=VARCHAR}
+		, PP_RES = #{ppRes, jdbcType=VARCHAR}
+		, PP_PER = #{ppPer, jdbcType=DATE}
+		, PP_WW = #{ppWw, jdbcType=VARCHAR}
+	WHERE pp_pno = #{ppPno}
+	</update>
+	
+
+
+</mapper>

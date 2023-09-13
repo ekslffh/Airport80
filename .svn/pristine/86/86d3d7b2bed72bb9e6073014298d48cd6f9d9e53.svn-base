@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.operate.bidApplication.dao.BidApplDAO">
+	<sql id="searchFrag">
+		<where>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'bnNo'">
+						INSTR(BA_BN_NO, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'status'">
+						INSTR(BA_STATUS, #{simpleCondition.searchWord}) > 0
+					</when>
+
+					<otherwise>
+						INSTR(BA_BN_NO, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(BA_STATUS, #{simpleCondition.searchWord}) > 0
+						
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM BID_APPLICATION
+		<include refid="searchFrag" />
+	</select>
+
+
+	<select id="selectBaList" resultType="bidApplicationVO" 
+	parameterType="PaginationInfo">
+	SELECT B.*
+		FROM (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+				SELECT
+					BA_ID, BA_BN_NO, BA_CRT_TS, BA_STATUS, BA_REQ_SPACE, BA_PASSWORD
+				FROM BID_APPLICATION
+				<include refid="searchFrag" />
+				ORDER BY BA_ID DESC
+			 ) A
+		) B
+		<![CDATA[   
+      WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+      ]]>
+	</select>
+	
+	<resultMap type="bidApplicationVO" id="baMap" autoMapping="true">
+		<id property="baBnNo" column="BA_BN_NO"/>
+		<association property="fileGroup" javaType="AtchFileVO">
+			<id property="atchFileId" column="ATCH_FILE_ID"/>
+			<result property="creatDt" column="CREAT_DT"/>
+			<result property="useAt" column="USE_AT"/>
+			<collection property="detailList" ofType="AtchFileDetailVO" autoMapping="true">
+				<id property="atchFileId" column="ATCH_FILE_ID"/>
+				<id property="fiSn" column="FI_SN"/>
+			</collection>
+		</association>
+	</resultMap>
+	
+	
+
+	<select id="selectBa" resultType="int" resultMap="baMap">
+		WITH ATCH_FILE_VIEW AS ( 
+		    SELECT * FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL USING (ATCH_FILE_ID) 
+		) 
+		SELECT
+			BA_ID,
+			BA_BN_NO,
+			BA_CO_NM,
+			BA_START_TIME,
+			BA_END_TIME,
+			BA_EMAIL,
+			BA_EMAIL_DO,
+			BA_CONTACT,
+			BA_STATUS,
+			BA_PASSWORD,
+			BA_IMG,
+			BA_REQ_SPACE,
+			BA_AMT,
+			BA_ATCH_FILE
+			, ATCH_FILE_ID, CREAT_DT, USE_AT
+		    , ATCH_FILE_ID, FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE, FI_MIME
+		FROM BID_APPLICATION
+			LEFT OUTER JOIN ATCH_FILE_VIEW ON (ATCH_FILE_ID = BA_ATCH_FILE)
+		WHERE BA_ID = #{baId}
+
+	</select>
+	
+	<insert id="insertBa" parameterType="bidApplicationVO">
+		<selectKey order="BEFORE" keyProperty="baId"
+			resultType="string">
+			SELECT 'BA' || TO_CHAR(BA_SEQ.NEXTVAL, 'FM009')
+			FROM DUAL
+		</selectKey>
+		INSERT INTO BID_APPLICATION(
+		BA_ID
+		, BA_BN_NO
+		, BA_CO_NM
+		, BA_START_TIME
+		, BA_END_TIME
+		,BA_EMAIL
+		,BA_EMAIL_DO
+		,BA_CONTACT
+		, BA_STATUS
+		, BA_AMT
+		, BA_REQ_SPACE
+		, BA_PASSWORD
+		, BA_IMG
+		, BA_ATCH_FILE
+		)
+		VALUES(
+		#{baId,jdbcType=NUMERIC}
+		, #{baBnNo,jdbcType=NUMERIC}
+		, #{baCoNm,jdbcType=VARCHAR}
+		, #{baStartTime,jdbcType=VARCHAR}
+		, #{baEndTime,jdbcType=VARCHAR}
+		, #{baEmail,jdbcType=VARCHAR}
+		, #{baEmailDo,jdbcType=VARCHAR}
+		,#{baContact,jdbcType=VARCHAR}
+		, '신청접수'
+		, #{baAmt,jdbcType=VARCHAR}
+		, #{baReqSpace,jdbcType=VARCHAR}
+		, #{baPassword,jdbcType=VARCHAR}
+		, #{baImg,jdbcType=VARCHAR}
+		, #{atchFileId,jdbcType=CHAR}
+
+
+		)
+	</insert>
+
+
+
+	
+	<update id="updateBa" parameterType="bidApplicationVO">
+		UPDATE BID_APPLICATION
+		SET
+			 BA_START_TIME= #{baStartTime ,jdbcType=VARCHAR}
+			, BA_END_TIME= #{baEndTime ,jdbcType=VARCHAR}
+			, BA_CO_NM= #{baCoNm ,jdbcType=VARCHAR}
+			, BA_EMAIL= #{baEmail ,jdbcType=VARCHAR}
+			,BA_EMAIL_DO= #{baEmailDo,jdbcType=VARCHAR}
+			, BA_CONTACT= #{baContact ,jdbcType=VARCHAR}
+			, BA_ATCH_FILE= #{atchFileId,jdbcType=CHAR}
+			, BA_IMG= #{baImg,jdbcType=VARCHAR}
+		WHERE BA_ID= #{baId}
+	</update>
+	
+	<delete id="deleteBa">
+		DELETE FROM BID_APPLICATION
+		WHERE BA_ID = #{baId}
+	</delete>
+	
+	<update id="updateBaStatus" parameterType="bidApplicationVO">
+		UPDATE BID_APPLICATION
+		SET
+			BA_STATUS= #{baStatus ,jdbcType=VARCHAR}
+		WHERE
+		BA_ID = #{baId}
+	
+	</update>
+	
+	
+	<select id="selectNoBaList" resultType="bidApplicationVO" 
+	parameterType="Int">
+	
+				SELECT
+				    BA.BA_ID, BA.BA_BN_NO, BA.BA_CRT_TS,
+				    BA.BA_STATUS, BA.BA_REQ_SPACE
+				FROM BID_NOTICE BN
+					INNER JOIN BID_APPLICATION BA
+				ON BN.BN_NO = BA.BA_BN_NO
+				WHERE BN.BN_NO = ${baBnNo}
+				
+	</select>
+	
+	
+
+</mapper>                                                                                                                                                                         

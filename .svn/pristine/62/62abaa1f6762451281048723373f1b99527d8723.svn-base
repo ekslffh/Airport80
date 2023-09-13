@@ -1,0 +1,60 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+
+
+<div class="pagetitle">
+	<h1>출국금지자 관리</h1>
+</div>
+
+<section class="section">
+	<div class="row">
+		<div class="col-lg-12">
+			<div class="card">
+				<div class="card-body">
+					<h5 class="card-title"></h5>
+					<p></p>
+					
+					
+					
+					<table class="table Default Table">
+						<thead class="table-light">
+							<th>이름</th>
+							<th>여권번호</th>
+							<th>금지사유</th>
+							<th>금지기간</th>
+						</thead>
+						<tbody>
+							<c:if test="${empty ppersonList }">
+								<tr>
+									<td colspan="4">출국금지자 없음.</td>
+								</tr>
+							</c:if>
+							<c:if test="${not empty ppersonList }">
+								<c:forEach items="${ppersonList }" var="pperson">
+									<c:url value="/safety/PPersonView.do" var="viewURL">
+										<c:param name="what" value="${pperson.ppPno }" />
+									</c:url>
+									<tr>
+										<td><a href="${viewURL }">${pperson.ppNm }</a></td>
+										<td>${pperson.ppPno }</td>
+										<td>${pperson.ppRes }</td>
+										<td>${pperson.ppPer }</td>
+									</tr>
+								</c:forEach>
+							</c:if>
+							<tr>
+								<td colspan="4"><a class="btn btn-primary"
+									href="<c:url value='/safety/exinsertForm.do'/>">등록</a></td>
+							</tr>
+						</tbody>
+					</table>
+
+
+
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+

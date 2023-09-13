@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.lostItem.dao.ZoneDAO">
+
+	<!-- ZoneVO의 Mapper XML -->
+	<resultMap id="zoneResultMap" type="ZoneVO" autoMapping="true">
+		<id property="zoneCd" column="ZONE_CD" />
+		<collection property="cdnList" ofType="ZoneCdnVO" autoMapping="true">
+			<id property="cdnQa" column="CDN_QA" />
+			<id property="zoneCd" column="ZONE_CD" />
+		</collection>
+	</resultMap>
+
+	<select id="selectZoneWithCdnList" resultMap="zoneResultMap">
+		SELECT *
+   		FROM ZONE Z
+    	RIGHT OUTER JOIN ZONE_CDN C ON Z.ZONE_CD = C.ZONE_CD
+    	WHERE Z.ZONE_CD LIKE '2%'
+	</select>
+	
+	<select id="selectZoneWithCdn" resultMap="zoneResultMap" parameterType="String">
+		SELECT *
+   			FROM ZONE Z
+    		RIGHT OUTER JOIN ZONE_CDN C ON Z.ZONE_CD = C.ZONE_CD
+    		WHERE Z.ZONE_CD = #{zoneCd}
+	
+	</select>
+
+
+</mapper>

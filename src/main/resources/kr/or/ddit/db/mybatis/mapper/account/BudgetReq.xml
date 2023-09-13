@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.accounting.budgetreq.dao.BudgetReqDAO">
+
+
+	<sql id="searchFrag">
+		<where>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'id'">
+						INSTR(aca_id, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'name'">
+						INSTR(aca_nm, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'info'">
+						INSTR(aca_info, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(aca_id, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(aca_nm, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(aca_info,
+						#{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM BUDGET_REQ
+		<include refid="searchFrag" />
+	</select>
+
+	<select id="getAllBudgetReqList" resultType="BudgetReqVO"
+		parameterType="HashMap">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		br.bg_r_id,
+		br.bg_r_use_ts,
+		br.bg_r_amt,
+		br.bg_r_rsn,
+		br.bg_r_status,
+		br.bg_r_ts,
+		br.bg_r_res_rsn,
+		br.bg_r_res_ts,
+		emp.emp_nm AS "empEmpNm",
+		sal.emp_nm AS
+		"salEmpNm",
+		cat.aca_nm AS "acaNm"
+		FROM
+		BUDGET_REQ br
+		LEFT JOIN
+		employee emp
+		ON br.emp_emp_no = emp.emp_no
+		LEFT JOIN
+		employee sal ON br.sal_emp_no =
+		sal.emp_no
+		LEFT JOIN
+		account_category cat ON br.aca_id = cat.aca_id
+		<include refid="searchFrag" />
+		ORDER BY bg_r_ts DESC
+		) A
+		) B
+        <![CDATA[
+        WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+        ]]>
+	</select>
+	
+	
+	<select id="getAllBudgetReqListDAO" resultType="BudgetReqVO">
+		SELECT
+		br.bg_r_id,
+		br.bg_r_use_ts,
+		br.bg_r_amt,
+		br.bg_r_rsn,
+		br.bg_r_status,
+		br.bg_r_ts,
+		br.bg_r_res_rsn,
+		br.bg_r_res_ts,
+		emp.emp_no AS "empEmpNo",
+		emp.emp_nm AS "empEmpNm",
+		sal.emp_nm AS "salEmpNm",
+		cat.aca_nm AS "acaNm"
+		FROM
+		BUDGET_REQ br
+		LEFT JOIN
+		employee emp
+		ON br.emp_emp_no = emp.emp_no
+		LEFT
+		JOIN
+		employee sal ON br.sal_emp_no =
+		sal.emp_no
+		LEFT JOIN
+		account_category cat ON br.aca_id = cat.aca_id
+		<include refid="searchFrag" />
+		ORDER BY bg_r_ts DESC
+	</select>
+	
+	<select id="getDeptBudgetReqListDAO" resultType="BudgetReqVO">
+		SELECT
+		br.bg_r_id,
+		br.bg_r_use_ts,
+		br.bg_r_amt,
+		br.bg_r_rsn,
+		br.bg_r_status,
+		br.bg_r_ts,
+		br.bg_r_res_rsn,
+		br.bg_r_res_ts,
+		emp.emp_no AS "empEmpNo",
+		emp.emp_nm AS "empEmpNm",
+		sal.emp_nm AS "salEmpNm",
+		cat.aca_nm AS "acaNm"
+		FROM
+		BUDGET_REQ br
+		LEFT JOIN
+		employee emp
+		ON br.emp_emp_no = emp.emp_no
+		LEFT
+		JOIN
+		employee sal ON br.sal_emp_no =
+		sal.emp_no
+		LEFT JOIN
+		account_category cat ON br.aca_id = cat.aca_id
+	    WHERE SUBSTR(EMP_EMP_NO, 1, 4) =#{deptNo}
+		ORDER BY bg_r_ts DESC
+	</select>
+	
+	
+
+	<select id="getBudgetReq">
+		SELECT
+		br.bg_r_id,
+		br.bg_r_use_ts,
+		br.bg_r_amt,
+		br.bg_r_rsn,
+		br.bg_r_status,
+		br.bg_r_ts,
+		br.bg_r_res_rsn,
+		br.bg_r_res_ts,
+		emp.emp_no AS "empEmpNo",
+		emp.emp_nm AS "empEmpNm",
+		sal.emp_nm AS "salEmpNm",
+		cat.aca_nm AS "acaNm",
+		cat.aca_id as "acaId"
+		FROM
+		BUDGET_REQ br
+		LEFT JOIN
+		employee emp
+		ON br.emp_emp_no = emp.emp_no
+		LEFT
+		JOIN
+		employee sal ON br.sal_emp_no =
+		sal.emp_no
+		LEFT JOIN
+		account_category cat ON br.aca_id = cat.aca_id
+		WHERE BG_R_ID =#{bgRId}
+	</select>
+
+	<insert id="insertBudgetReqDAO">
+		<selectKey keyProperty="bgRId" resultType="String"
+			order="BEFORE">
+			SELECT 'BG_REQ_' || LPAD(BUDGET_REQ_SEQ.NEXTVAL, 4, '0') AS bgRId FROM DUAL
+		</selectKey>
+		INSERT INTO budget_req (
+		bg_r_id,
+		bg_r_use_ts,
+		bg_r_amt,
+		bg_r_rsn,
+		bg_r_status,
+		emp_emp_no,
+		aca_id
+		) VALUES (
+		#{bgRId}
+		,#{bgRUseTs,jdbcType=TIMESTAMP}
+		,#{bgRAmt}
+		,#{bgRRsn, jdbcType=VARCHAR}
+		,'승인대기'
+		,#{empEmpNo, jdbcType=VARCHAR}
+		,#{acaId, jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<update id="updateBudgetReqDAO">
+        UPDATE budget_req
+        SET   BG_R_RES_RSN = #{bgRResRsn, jdbcType=VARCHAR},
+              BG_R_STATUS = #{bgRStatus, jdbcType=VARCHAR},
+              SAL_EMP_NO = #{salEmpNo, jdbcType=VARCHAR},
+              BG_R_RES_TS = SYSTIMESTAMP
+        WHERE BG_R_ID = #{bgRId, jdbcType=VARCHAR}
+    </update>
+    
+    <delete id="deleteBudgetReqDAO">	
+ 	   DELETE FROM  budget_req
+  	   WHERE bg_r_id = #{bgRId}
+    </delete>
+
+	<select id="selectBudUdForm" resultType="BudgetReqVO">
+	SELECT
+	*
+	FROM
+    	budget_req
+    WHERE BG_R_ID =#{bgRId}
+	</select>
+
+
+
+</mapper>

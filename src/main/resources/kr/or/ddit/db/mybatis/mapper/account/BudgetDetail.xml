@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.accounting.budgetdetail.dao.BudgetDetailDAO">
+
+	<sql id="searchFrag">
+		<where>
+			<if
+				test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'id'">
+						INSTR(bud_id, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'acaId'">
+						INSTR(aca_id, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'bdAmt'">
+						INSTR(CAST(bd_amt AS VARCHAR), #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(bud_id, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(aca_id, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(CAST(bd_amt AS VARCHAR), #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="kr.or.ddit.vo.PaginationInfo">
+		SELECT COUNT(*) AS totalRecord
+		FROM budget_detail
+	</select>
+
+	<select id="getAllBudgetDetailList"
+		resultType="kr.or.ddit.accounting.budgetdetail.vo.budgetDetailVO"
+		parameterType="kr.or.ddit.vo.PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		bud_id,
+		aca_id,
+		bd_amt,
+		bd_crt_ts,
+		bd_upd_ts,
+		bd_id
+		FROM budget_detail
+		<include refid="searchFrag" />
+		ORDER BY bd_crt_ts DESC
+		) A
+		) B
+        <![CDATA[
+        WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+        ]]>
+	</select>
+
+	<select id="getBudgetDetailById" parameterType="String"
+		resultType="kr.or.ddit.accounting.budgetdetail.vo.budgetDetailVO">
+		SELECT
+		a.bud_id,
+		a.bud_year,
+		a.bud_amt,
+		a.bud_crt_dt,
+		a.bud_upd_dt,
+		a.dept_no,
+		c.aca_nm "acaNm",
+		b.bd_amt,
+		b.bd_crt_ts,
+		b.bd_upd_ts,
+		b.bd_id
+		FROM BUDGET a
+		INNER JOIN BUDGET_DETAIL b ON a.bud_id = b.bud_id
+		INNER JOIN ACCOUNT_CATEGORY c ON b.aca_id = c.aca_id
+		WHERE a.bud_id = #{budId}
+	</select>
+	
+	<select id="getBudgetDetail" parameterType="budgetDetailVO">
+		SELECT
+    		 bud_id,
+   			 aca_id,
+  		     bd_amt,
+    		 bd_crt_ts,
+  		     bd_upd_ts
+		FROM
+    		budget_detail
+    		WHERE BUD_ID = #{budId} AND ACA_ID = #{acaId}
+	</select>
+	
+<insert id="insertBudgetDetail" parameterType="kr.or.ddit.accounting.budgetdetail.vo.budgetDetailVO">
+    <selectKey keyProperty="bdId" resultType="String" order="BEFORE">
+        SELECT BUDGET_DETAIL_SEQ.nextval FROM DUAL
+    </selectKey>
+    INSERT INTO budget_detail (
+        bd_id,
+        bud_id,
+        aca_id,
+        bd_amt,
+        bd_crt_ts
+    )
+    VALUES (
+        #{bdId},
+        #{budId},
+        #{acaId},
+        #{bdAmt},
+        sysdate
+    )
+</insert>
+
+	<update id="updateBudgetDetail"
+		parameterType="kr.or.ddit.accounting.budgetdetail.vo.budgetDetailVO">
+		UPDATE budget_detail
+		SET
+		bd_amt = #{bdAmt},
+		bd_upd_ts = sysdate
+		WHERE BUD_ID = #{budId} AND ACA_ID = #{acaId}
+	</update>
+
+	<delete id="deleteBudgetDetail" parameterType="String">
+		DELETE FROM budget_detail WHERE bd_id = #{bdId}
+	</delete>
+	
+	<delete id="deleteByYearAndDeptNo" parameterType="BudgetVO">
+		DELETE FROM BUDGET_DETAIL
+		WHERE BUD_ID IN (SELECT BUD_ID FROM BUDGET WHERE BUD_YEAR = #{budYear} AND DEPT_NO = #{deptNo})
+	</delete>
+
+</mapper>

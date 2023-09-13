@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE tiles-definitions PUBLIC
+       "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+       "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+
+  <definition name="inParent" template="/WEB-INF/views/inTemplate.jsp">
+     <put-attribute name="title" value="Airport:80" />
+   <put-attribute name="preScript" value="/in/preScript.jsp" />
+     <put-attribute name="headerMenu" value="/in/headerMenu.jsp" />
+     <put-attribute name="footer" value="/in/footer.jsp" />
+   <put-attribute name="postScript" value="/in/postScript.jsp" />
+  </definition>
+  
+  <definition name="openParent" template="/WEB-INF/views/openTemplate.jsp">
+     <put-attribute name="title" value="Airport:80" />
+   <put-attribute name="preScript" value="/open/preScript.jsp" />
+     <put-attribute name="headerMenu" value="/open/headerMenu.jsp" />
+     <put-attribute name="footer" value="/open/footer.jsp" />
+   <put-attribute name="postScript" value="/open/postScript.jsp" />
+  </definition>
+
+  <definition name="custIndex" extends="openParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/custIndex.jsp" />
+  </definition>
+  
+    <definition name="open/*/*" extends="openParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/open/{1}/{2}.jsp" />
+  </definition>
+  
+  <definition name="compIndex" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/compIndex.jsp" />
+  </definition>
+
+  <definition name="operate" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/operate/compIndex.jsp" />
+  </definition>
+  <definition name="infra" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/infra/compIndex.jsp" />
+  </definition>
+  <definition name="hr" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/hr/compIndex.jsp" />
+  </definition>
+  <definition name="accounting" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/accounting/compIndex.jsp" />
+  </definition>
+  <definition name="safety" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/safety/compIndex.jsp" />
+  </definition>
+  
+  <definition name="operate/*/*" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/operate/{1}/{2}.jsp" />
+  </definition>
+  <definition name="accounting/*/*" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/accounting/{1}/{2}.jsp" />
+  </definition>
+    <definition name="hr/*/*" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/hr/{1}/{2}.jsp" />
+  </definition>
+   <definition name="infra/*/*" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/infra/{1}/{2}.jsp" />
+  </definition>
+  <definition name="safety/*/*" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/safety/{1}/{2}.jsp" />
+  </definition>
+    <definition name="common/*/*" extends="inParent">
+    <put-attribute name="contentPage" value="/WEB-INF/views/common/{1}/{2}.jsp" />
+  </definition>
+  
+  
+  
+  
+  
+
+  
+</tiles-definitions>

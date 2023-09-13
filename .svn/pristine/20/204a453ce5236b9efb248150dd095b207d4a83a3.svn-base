@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.common.schedule.dao.ScheduleDAO">
+
+	<update id="updateSchedule" parameterType="ScheduleVO">
+		UPDATE SCHEDULE
+			SET
+			SCHE_TITLE = #{scheTitle, jdbcType=VARCHAR}
+			, SCHE_LOC = #{scheLoc, jdbcType=VARCHAR}
+			, SCHE_START_DT = #{scheStartDt, jdbcType=DATE}
+			, SCHE_END_DT = #{scheEndDt, jdbcType=DATE}
+			, SCHE_TARGET = #{scheTarget, jdbcType=VARCHAR}
+			, SCHE_WRITER = #{scheWriter, jdbcType=CHAR}
+			WHERE SCHE_ID = #{scheId, jdbcType=VARCHAR}
+		
+	</update>
+	
+	<select id="selectScheduleList" parameterType="String" resultType="ScheduleVO">
+		SELECT * FROM SCHEDULE
+		WHERE SCHE_TARGET = #{scheTarget} or SCHE_TARGET = '0000'
+	</select>
+	
+	<select id="selectSchedule" parameterType="String" resultType="ScheduleVO">
+		SELECT * FROM SCHEDULE
+		WHERE SCHE_ID = #{scheId}
+	</select>
+	
+	<insert id="insertSchedule" parameterType="ScheduleVO">
+	
+	<selectKey order="BEFORE" keyProperty="scheId" resultType="string">
+			SELECT SCHE_SEQ.NEXTVAL FROM DUAL
+	</selectKey>
+	
+		INSERT INTO SCHEDULE
+		(SCHE_ID,
+		 SCHE_TITLE, 
+		 SCHE_LOC, 
+		 SCHE_START_DT, 
+		 SCHE_END_DT,
+		 SCHE_TARGET, 
+		 SCHE_WRITER
+		 ) VALUES (
+		#{scheId,jdbcType=VARCHAR}
+		, #{scheTitle,jdbcType=VARCHAR}
+		, #{scheLoc,jdbcType=VARCHAR}
+		, #{scheStartDt,jdbcType=DATE}
+		, #{scheEndDt,jdbcType=DATE}
+		, #{scheTarget,jdbcType=VARCHAR}
+		, #{scheWriter,jdbcType=CHAR}
+		)
+	</insert>
+	
+	<delete id="deleteSchedule" parameterType="string">
+		DELETE FROM SCHEDULE
+		WHERE SCHE_ID = #{scheId}
+	</delete>
+	
+</mapper>

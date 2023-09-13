@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.safety.confiscation.dao.OtherDAO">
+	<select id="selectConfisInfoList" resultType="ConfiscationInfoVO">
+	SELECT
+		DISTINCT ci_gubun
+	FROM confiscation_info
+	</select>
+	
+	<select id="selectZoneList" resultType="ZoneVO">
+	SELECT
+	    zone_cd,
+	    zone_floor,
+	    ZONE_CTGR
+	FROM
+	    zone
+	WHERE
+	    ZONE_CTGR LIKE '게이트%'
+	</select>
+	
+	<select id="selectAllZoneList" resultType="ZoneVO">
+	SELECT
+	    zone_cd,
+	    zone_floor,
+	    ZONE_CTGR
+	FROM zone
+	GROUP BY zone_floor, zone_cd, ZONE_CTGR
+	ORDER BY zone_floor, zone_cd
+	</select>
+	
+	<select id="selectSecurityList" resultType="SecurityLogVO">
+		SELECT 
+		slog_id,slog_title, code_nm as "common.codeNm", slog_issue,
+		zone_floor as "zone.zoneFloor", zone_ctgr as "zone.zoneCtgr", slog_confis
+		FROM SECURITY_LOG
+		INNER JOIN COMMON_CODE ON (SLOG_CA = CODE_ID)
+		INNER JOIN ZONE ON (ZONE_CD = SLOG_FC)
+		WHERE SLOG_ID NOT IN (SELECT SLOG_ID FROM CONFISCATION
+		WHERE SLOG_ID IS NOT NULL)
+		AND slog_confis = 'Y'
+		ORDER BY CAST (substr(slog_id,4) as number) DESC
+	</select>
+
+	<select id="selectSecaList" resultType="CommonCodeVO">
+		SELECT * FROM COMMON_CODE
+    	WHERE code_upper = 'SECA'
+	</select>
+	
+	
+	<resultMap type="SecurityReqVO" id="secReqMap" autoMapping="true">
+	<id property="srId" column="SR_ID"/>
+	<result property="srReqMem" column="EMP_NM"/>
+	<result property="srCa" column="CODE_NM"/>
+	<result property="srTs" column="SR_TS"/>
+	<result property="srContent" column="SR_CONTENT"/>
+	<result property="srPrcDt" column="SR_PRC_DT"/>
+	<result property="srPrcCt" column="SR_PRC_CT"/>
+
+	<association property="common" javaType="CommonCodeVO">
+		<result property="codeId" column="SR_CA"/>
+	</association>	
+	
+	<association property="zone" javaType="ZoneVO" >
+		<result property="zoneFloor" column="ZONE_FLOOR"/>
+		<result property="zoneCtgr" column="ZONE_CTGR"/>
+		<result property="zoneCd" column="ZONE_CD"/>
+	</association>
+	</resultMap>
+	<select id="selectSecReqList" resultMap="secReqMap">
+	SELECT
+	SR_ID, EMP_NM, CODE_NM, ZONE_FLOOR, ZONE_CTGR, SR_TS, SR_CONTENT, SR_CA, SR_PRC_DT, SR_PRC_CT, ZONE_CD
+	
+	FROM security_req
+	LEFT OUTER JOIN COMMON_CODE
+	ON SR_CA = CODE_ID
+	LEFT OUTER JOIN ZONE 
+	ON SR_LOC = ZONE_CD
+	LEFT OUTER JOIN EMPLOYEE
+	ON SR_REQ_MEM = EMP_NO
+	WHERE SR_ID NOT IN (SELECT SLOG_SR_ID FROM SECURITY_LOG WHERE SLOG_SR_ID IS NOT NULL)
+	AND SR_STATUS = 'COMP'
+	ORDER BY TO_NUMBER(REGEXP_SUBSTR(SR_ID, '\d+')) DESC
+	</select>
+
+</mapper>

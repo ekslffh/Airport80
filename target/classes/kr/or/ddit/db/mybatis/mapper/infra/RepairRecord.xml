@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.Infra.repairRecord.dao.RRecordDAO">
+
+<insert id="createRecord" parameterType="repairRecordVO">
+<selectKey order="BEFORE" resultType="string" keyProperty="rrcId">
+     SELECT 'RRC' || TO_CHAR(RRC_ID_SEQ.NEXTVAL, 'FM00009') FROM DUAL
+</selectKey>
+INSERT INTO REPAIR_RECORD (
+RRC_ID,
+RRE_CITUATION,
+RRE_TS,
+RRE_RS_ID
+) VALUES (
+#{rrcId, jdbcType=VARCHAR},
+#{rreCituation, jdbcType=VARCHAR},
+SYSTIMESTAMP,
+#{rreRsId, jdbcType=VARCHAR}
+)
+</insert>
+
+<select id="selectRecord" parameterType="String" resultType="repairRecordVO">
+SELECT 
+RRC_ID,
+RRE_CITUATION,
+RRE_TS,
+RRE_RS_ID,
+RR_TS
+FROM 
+REPAIR_RECORD
+INNER JOIN RNC_SCHEDULE ON (RRE_RS_ID = RS_ID)
+LEFT JOIN RNC_REQ ON (RS_ID = RR_RS_ID )
+WHERE RRC_ID = #{rrcId}
+</select>
+</mapper>

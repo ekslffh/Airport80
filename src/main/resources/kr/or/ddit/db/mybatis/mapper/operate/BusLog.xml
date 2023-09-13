@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.busLog.dao.BusLogDAO">
+
+
+<select id="selectTotalRecord" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM BUS_LOG
+
+	</select>
+
+	
+	<select id="selectBlogList" resultType="busLogVO" parameterType="PaginationInfo">
+	SELECT B.*
+		FROM (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (	
+				SELECT
+					BLOG_ID, BLOG_TITLE, BLOG_CRT_TS, BLOG_WRITER
+				FROM BUS_LOG
+				ORDER BY BLOG_ID DESC
+			  ) A
+		) B
+		<![CDATA[   
+      WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+      ]]>
+	</select>
+		
+
+
+
+	<select id="selectBlog" resultType="busLogVO">
+		SELECT
+		BLOG_ID,
+		BLOG_TITLE,
+		BLOG_CONTENT,
+		BLOG_CRT_TS,
+		BLOG_WRITER
+		FROM BUS_LOG
+		WHERE BLOG_ID = #{blogId}
+
+	</select>
+
+	<insert id="insertBlog" parameterType="busLogVO">
+		<selectKey order="BEFORE" keyProperty="blogId"
+			resultType="string">
+			SELECT 'BL' || TO_CHAR(BLOG_SEQ.NEXTVAL, 'FM009')
+			FROM DUAL
+		</selectKey>
+		INSERT INTO BUS_LOG(
+			BLOG_ID,
+			BLOG_TITLE,
+			BLOG_CONTENT,
+			BLOG_CRT_TS,
+			BLOG_WRITER
+		)
+		VALUES(
+		  #{blogId,jdbcType=VARCHAR}
+		, #{blogTitle,jdbcType=VARCHAR}
+		, #{blogContent,jdbcType=VARCHAR}
+		, #{blogCrtTs,jdbcType=TIMESTAMP}
+		, #{blogWriter,jdbcType=CHAR}
+		)
+	</insert>
+	
+	<update id="updateBlog" parameterType="busLogVO">
+		UPDATE BUS_LOG
+		SET
+		  BLOG_TITLE= #{blogTitle ,jdbcType=VARCHAR}
+		, BLOG_CONTENT= #{blogContent ,jdbcType=VARCHAR}
+		, BLOG_CRT_TS= #{blogCrtTs ,jdbcType=TIMESTAMP}
+		, BLOG_WRITER= #{blogWriter ,jdbcType=CHAR}
+		WHERE BLOG_ID = #{blogId}
+
+	</update>
+	
+	<delete id="deleteBlog">
+		DELETE FROM BUS_LOG
+		WHERE BLOG_ID = #{blogId}
+	</delete>
+
+
+
+
+</mapper>

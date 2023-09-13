@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.airline.dao.AirlineDAO">
+   <sql id="searchFrag">
+      <where>
+           <if test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+              <choose>
+                 <when test="simpleCondition.searchType eq 'name'">
+                    INSTR(AL_KNM, #{simpleCondition.searchWord}) > 0
+                 </when>
+                 <when test="simpleCondition.searchType eq 'scale'">
+                    INSTR(AL_SCALE, #{simpleCondition.searchWord}) > 0
+                 </when>
+                 <when test="simpleCondition.searchType eq 'status'">
+                    INSTR(AL_STATUS, #{simpleCondition.searchWord}) > 0
+                 </when>
+                 <otherwise>
+                    INSTR(AL_KNM, #{simpleCondition.searchWord}) > 0
+                    OR
+                    INSTR(AL_SCALE, #{simpleCondition.searchWord}) > 0
+                    OR
+                    INSTR(AL_STATUS, #{simpleCondition.searchWord}) > 0
+                 </otherwise>
+              </choose>
+           </if>
+        </where>
+   </sql>
+   
+   <select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.vo.PaginationInfo">
+      SELECT COUNT(*)
+      FROM AIRLINE
+      <include refid="searchFrag" />
+   </select>
+   
+   <select id="countAirlineOn" resultType="long" parameterType="AirlineVO">
+   	  SELECT COUNT(*)
+   	  FROM AIRLINE
+   	  WHERE AL_STATUS = '운영'
+   </select>
+   <select id="countAirlineOff" resultType="long" parameterType="AirlineVO">
+   	  SELECT COUNT(*)
+   	  FROM AIRLINE
+   	  WHERE AL_STATUS = '폐업'
+   </select>
+   <select id="countAirlineStop" resultType="long" parameterType="AirlineVO">
+   	  SELECT COUNT(*)
+   	  FROM AIRLINE
+   	  WHERE AL_STATUS = '정지'
+   </select>
+   
+   <select id="selectAirlineList" resultType="kr.or.ddit.operate.vo.AirlineVO" parameterType="kr.or.ddit.vo.PaginationInfo">
+   	SELECT B.*
+      FROM (
+          SELECT ROWNUM RNUM, A.*
+          FROM (
+              SELECT
+                     AL_CD, AL_KNM, AL_COUNTRY, AL_SCALE, AL_VR_ID, AL_STATUS, AL_WEB
+              FROM AIRLINE
+			  <include refid="searchFrag" />
+              ORDER BY AL_CD DESC
+          ) A
+      ) B
+      <![CDATA[   
+      WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+   	  ]]>
+   </select>
+   
+   <select id="selectAirline" resultType="kr.or.ddit.operate.vo.AirlineVO">
+		SELECT
+			AL_CD, AL_KNM, AL_ENM, AL_COUNTRY, AL_COUN_CD
+			, AL_FLAG, AL_SCALE, AL_WEB, AL_DESC, AL_HEAD
+			, AL_VR_ID, AL_STATUS
+		FROM AIRLINE
+		WHERE AL_CD = #{alCd}
+	</select>
+	
+   <insert id="insertAirline" parameterType="kr.or.ddit.operate.vo.AirlineVO">
+   	INSERT INTO airline (
+	    al_cd,
+	    al_knm,
+	    al_enm,
+	    al_country,
+	    al_coun_cd,
+	    al_flag,
+	    al_scale,
+	    al_head,
+	    al_vr_id,
+	    al_status
+	) VALUES (
+	    #{alCd,jdbcType=VARCHAR},
+	    #{alKnm,jdbcType=VARCHAR},
+	    #{alEnm,jdbcType=VARCHAR},
+	    #{alCountry,jdbcType=VARCHAR},
+	    #{alCounCd,jdbcType=VARCHAR},
+	    #{alFlag,jdbcType=VARCHAR},
+	    #{alScale,jdbcType=VARCHAR},
+	    #{alHead,jdbcType=VARCHAR},
+	    CONCAT(#{alCd,jdbcType=VARCHAR}, 'P'),
+	    '운영'
+	)
+   </insert>
+
+	<update id="updateAirline" parameterType="kr.or.ddit.operate.vo.AirlineVO">
+		UPDATE airline
+		SET
+		  AL_WEB = #{alWeb,jdbcType=VARCHAR}
+		, AL_DESC = #{alDesc,jdbcType=VARCHAR}
+		, AL_HEAD = #{alHead,jdbcType=VARCHAR}
+		, AL_UPD_DT = SYSDATE	
+		, AL_STATUS = #{alStatus,jdbcType=VARCHAR}
+		WHERE
+		     AL_CD = #{alCd,jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateAirlineStatus" parameterType="AirlineVO">
+		UPDATE AIRLINE
+		SET
+			AL_STATUS = #{alStatus,jdbcType=VARCHAR}
+		WHERE
+			AL_CD = #{alCd,jdbcType=VARCHAR}
+	</update>
+	
+	<select id="getLogo" parameterType="string" resultType="string">
+		SELECT AL_DESC FROM AIRLINE
+		WHERE AL_CD = #{alCd}
+	</select>
+	
+</mapper>

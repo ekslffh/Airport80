@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.hr.vacationReq.dao.VacationDAO">
+
+
+	<select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.vo.PaginationInfo">
+		SELECT COUNT(*)
+		FROM AIRLINE
+	</select>
+
+	<insert id="insertVacReq" parameterType="kr.or.ddit.hr.vo.VacationReqVO">
+	    <selectKey order="BEFORE" keyProperty="vrId" resultType="string">
+	        SELECT CONCAT('V2023', LPAD(VENDOR_SEQ.NEXTVAL, 4, '0'))
+	        FROM DUAL
+	    </selectKey>
+	    INSERT INTO VACATION_REQ (
+	    vr_id,
+	    vr_start_ts,
+	    vr_end_ts,
+	    vr_req_dt,
+	    vr_status,
+	    vr_type,
+	    vr_rsn,
+	    vr_emp_no,
+	    vr_att_id,
+	    vr_period
+	    ) VALUES (
+	    #{vrId,jdbcType=VARCHAR}
+	    , #{vrStartTs,jdbcType=DATE}
+	    , #{vrEndTs,jdbcType=DATE}
+	    , SYSDATE
+	    , 'APP'
+	    , #{vrType,jdbcType=VARCHAR}
+	    , #{vrRsn,jdbcType=VARCHAR}
+	    , #{vrEmpNo,jdbcType=VARCHAR}
+	    , 'ATT' || ATT_SEQ.NEXTVAL
+	    , TO_NUMBER(TO_CHAR(#{vrEndTs,jdbcType=DATE}, 'J') - TO_CHAR(#{vrStartTs,jdbcType=DATE}, 'J')) + 1
+	    )
+	</insert>
+
+	<select id="selectVrCalList" resultType="VacationReqVO">
+		SELECT VR.*, EE.EMP_NM
+		FROM VACATION_REQ VR
+		INNER JOIN EMPLOYEE EE ON VR.VR_EMP_NO = EE.EMP_NO
+		WHERE VR_STATUS = 'APPR'
+	</select>
+
+	<select id="selectVacReqList" resultType="kr.or.ddit.hr.vo.VacationReqVO" parameterType="kr.or.ddit.vo.PaginationInfo">
+		SELECT B.*, E.EMP_NM
+		FROM (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+		        SELECT
+		            VR_ID, VR_START_TS, VR_END_TS, VR_STATUS, VR_APP_DT, VR_TYPE, VR_EMP_NO, VR_PERIOD, VR_REQ_DT
+		        FROM VACATION_REQ 
+		        WHERE VR_STATUS = 'APP' 
+		    ) A
+		    ORDER BY VR_START_TS DESC
+		) B
+		JOIN EMPLOYEE E ON B.VR_EMP_NO = E.EMP_NO
+	</select>
+	
+	<select id="selectMyVacList" resultType="VacationReqVO">
+		SELECT VR_ID, VR_START_TS, VR_END_TS, VR_STATUS, VR_APP_DT, VR_TYPE, VR_EMP_NO, VR_PERIOD, VR_REQ_DT
+		FROM VACATION_REQ
+		WHERE VR_EMP_NO = #{vrEmpNo, jdbcType=VARCHAR}
+		ORDER BY VR_START_TS DESC
+	</select>
+	
+	<select id="selectVacReq" parameterType="VacationReqVO">
+		SELECT
+		    VR.VR_EMP_NO,
+		    VR.VR_START_TS,
+		    VR.VR_END_TS,
+		    VR.VR_TYPE,
+		    VR.VR_RSN,
+		    E.EMP_NM,
+		    VR.VR_PERIOD
+		FROM
+		    VACATION_REQ VR
+		INNER JOIN
+		    EMPLOYEE E ON VR.VR_EMP_NO = E.EMP_NO
+		WHERE
+		    VR.VR_ID = #{vrId}
+	</select>
+
+	<update id="updateVacReqStatus" parameterType="VacationReqVO">
+		UPDATE VACATION_REQ
+		SET 
+		  VR_STATUS = #{vrStatus, jdbcType=VARCHAR},
+		  VR_REJ_RSN = #{vrRejRsn, jdbcType=VARCHAR},
+		  VR_APP_DT = CASE
+		                WHEN #{vrStatus, jdbcType=VARCHAR} = 'APPR' THEN SYSDATE
+		                ELSE VR_APP_DT
+		              END
+		WHERE
+		  VR_ID = #{vrId, jdbcType=VARCHAR}
+	</update>
+	
+	<select id="selectVacTypeCnt" parameterType="VacationReqVO">
+		SELECT VR_TYPE, COUNT(*) as TYPE_COUNT
+		FROM VACATION_REQ
+		WHERE VR_EMP_NO IN (
+		        SELECT EMP_NO
+		        FROM employee
+		        WHERE EMP_NM = '김인사'
+		)
+		GROUP BY VR_TYPE
+		ORDER BY VR_TYPE
+	</select>
+</mapper>

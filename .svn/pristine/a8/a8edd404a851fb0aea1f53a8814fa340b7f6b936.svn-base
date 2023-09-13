@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- appender (where) -->
+<!-- layout (how format) -->
+<!-- logger (who) : log event level 소유 (TRACE -> DEBUG -> INFO -> WARN -> ERROR -> FATAL) -->
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{1.} - %msg%n"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Logger name="org.springframework.security" level="info" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping" level="trace" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping" level="trace" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="org.springframework" level="info" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="kr.or.ddit" level="info" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="jdbc.sqltiming" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="jdbc.resultsettable" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Root level="error">
+      <AppenderRef ref="Console"/>
+    </Root>
+  </Loggers>
+</Configuration>

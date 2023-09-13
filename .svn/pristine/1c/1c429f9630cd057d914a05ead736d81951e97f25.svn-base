@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.Infra.stock.dao.OthersDAO">
+<select id="selectZoneList" resultType="zoneVO">
+		SELECT ZONE_NM, ZONE_CD
+		FROM ZONE
+</select>
+
+<select id="selectlstockList" resultType="kr.or.ddit.Infra.vo.lstockVO">
+	SELECT LST_GU, LST_NM
+	FROM LSTOCK
+</select>	
+
+<select id="selectCommonList" resultType="CommonCodeVO">
+	SELECT 
+		CODE_ID, CODE_NM
+	FROM COMMON_CODE
+	WHERE CODE_UPPER = 'STOCK'
+</select>
+
+<select id="selectCcCommonList" resultType="CommonCodeVO">
+	SELECT CODE_ID, CODE_NM
+	FROM COMMON_CODE
+	WHERE CODE_UPPER = 'CC'
+</select>
+
+<select id="selectDeptList">
+	SELECT
+	   DEPT_NO, DEPT_NM, DEPT_LOC, DEPT_DESC, DEPT_CRT_DT, DEPT_MNGER 
+	FROM DEPARTMENT
+</select>
+
+<select id="selectAllZoneList" resultType="ZoneVO">
+		SELECT
+		    zone_cd,
+		    zone_floor,
+		    ZONE_CTGR
+		FROM zone
+		GROUP BY zone_floor, zone_cd, ZONE_CTGR
+		ORDER BY zone_floor, zone_cd
+</select>
+
+<select id="selectRncList" resultType="CommonCodeVO">
+		SELECT * FROM COMMON_CODE
+    	WHERE code_upper = 'RNC'
+</select>	
+</mapper>

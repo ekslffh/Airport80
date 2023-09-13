@@ -1,0 +1,57 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://www.springframework.org/tags/form" prefix="spring" %>
+<%@ taglib uri="http://www.springframework.org/tags/form" prefix="form" %>
+  
+<c:url value="/operate/flightlog/insert.do" var="insertURL" />
+<table class="table table-bordered">
+	<thead>
+		<tr align="right">
+			<td colspan="4">
+				<a href="${insertURL }" class="btn btn-primary">일지작성</a>
+			</td>
+		</tr>
+		<tr>
+			<th>제목</th>
+<!-- 			<th>내용</th> -->
+			<th>작성일시</th>
+			<th>작성자</th>
+		</tr>
+	</thead>
+	<tbody>
+		<c:set value="${paging.dataList }" var="fLogList" />
+		<c:if test="${empty fLogList }">
+			<tr>
+				<td colspan="4">등록된 일지 없음.</td>
+			</tr>
+		</c:if>	
+		<c:if test="${not empty fLogList }">
+			<c:forEach items="${fLogList }" var="fLog">
+				<c:url value="/operate/flightlog/view.do" var="viewURL">
+					<c:param name="what" value="${fLog.flId }" />
+				</c:url>
+				<tr>
+					<td><a href="${viewURL }">${fLog.flTitle }</a></td>
+<%-- 					<td>${fLog.flContent }</td> --%>
+					<td>${fLog.flCrtTs }</td>
+					<td>${fLog.employee.empNm }</td>
+				</tr>
+			</c:forEach>
+		</c:if>
+	</tbody>
+	<tfoot>
+		<tr>
+			<td colspan="4">
+				<div>
+					${paging.pagingHTML }
+				</div>
+			</td>
+		</tr>
+	</tfoot>
+</table>
+<script>
+	function fn_paging(page) {
+		location.href = "?page=" + page;
+	}
+</script>

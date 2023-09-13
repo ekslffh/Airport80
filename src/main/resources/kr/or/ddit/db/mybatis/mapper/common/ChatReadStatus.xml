@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.common.chat.dao.ChatReadStatusDAO">
+
+	<insert id="insertChatReadStatuses"
+		parameterType="java.util.List">
+		INSERT ALL
+		<foreach collection="list" item="data">
+			INTO CHAT_READ_STATUS ( CRS_EMP_NO, CRS_MSG_ID ) 
+			VALUES ( #{data.crsEmpNo}, #{data.crsMsgId} )
+		</foreach>
+		SELECT * FROM DUAL
+	</insert>
+
+</mapper>

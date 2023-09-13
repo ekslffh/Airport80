@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.common.account.dao.AccountDAO">
+	<select id="selectAccountForAuth" resultType="AccountVO">
+		SELECT
+		ACC_ID, ACC_PW, ACC_INFO, ACC_COUNT, ACC_LOCK, ACC_AUTH
+		FROM ACCOUNT
+		WHERE ACC_ID = #{accId}
+	</select>
+	
+	<select id="selectAccountList" resultType="AccountVO" parameterType="kr.or.ddit.vo.PaginationInfo">
+		SELECT B.*
+		FROM (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+		        SELECT
+		              ACC_ID, ACC_PW, ACC_INFO, ACC_COUNT, ACC_LOCK, ACC_DEL, ACC_AUTH
+		        FROM ACCOUNT
+<!-- 		        <include refid="searchFrag" /> -->
+		        ORDER BY ACC_ID DESC
+		    ) A
+		) B;
+		<![CDATA[ 
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<insert id="insertAccount" parameterType="AccountVO">
+	INSERT INTO account (
+		acc_id,
+		acc_pw,
+		acc_info,
+		acc_auth
+	) VALUES (
+		#{accId,jdbcType=VARCHAR}
+		, #{accPw,jdbcType=VARCHAR}
+		, #{accInfo,jdbcType=VARCHAR}
+		, #{accAuth,jdbcType=VARCHAR}
+	)
+</insert>
+</mapper>

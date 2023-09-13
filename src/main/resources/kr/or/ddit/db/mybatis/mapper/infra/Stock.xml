@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.Infra.stock.dao.StockDAO">
+
+<sql id="searchFrag">
+    <where>
+        <if test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+            <choose>
+                <when test="simpleCondition.searchType eq 'id'">
+                    INSTR(ST_ID, #{simpleCondition.searchWord}) > 0
+                </when>
+                <when test="simpleCondition.searchType eq 'name'">
+                    INSTR(ST_NM, #{simpleCondition.searchWord}) > 0
+                </when>
+                <when test="simpleCondition.searchType eq 'category'">
+                    EXISTS (SELECT 1 FROM COMMON_CODE WHERE INSTR(CODE_NM, #{simpleCondition.searchWord}) > 0 AND COMMON_CODE.CODE_ID = STOCK.ST_CTGR)
+                </when>
+                <when test="simpleCondition.searchType eq 'supplier'">
+                    EXISTS (SELECT 1 FROM SUPPLIER WHERE INSTR(NVL(SPR_NM, ''), #{simpleCondition.searchWord}) > 0 AND NVL(SUPPLIER.SPR_ID, '') = STOCK.ST_SPR_ID)
+                </when>
+                <otherwise>
+                    INSTR(ST_ID, #{simpleCondition.searchWord}) > 0
+                    OR
+                    INSTR(ST_NM, #{simpleCondition.searchWord}) > 0
+                    OR
+                    EXISTS (SELECT 1 FROM COMMON_CODE WHERE INSTR(CODE_NM, #{simpleCondition.searchWord}) > 0 AND COMMON_CODE.CODE_ID = STOCK.ST_CTGR)
+                    OR
+                    EXISTS (SELECT 1 FROM SUPPLIER WHERE INSTR(NVL(SPR_NM, ''), #{simpleCondition.searchWord}) > 0 AND NVL(SUPPLIER.SPR_ID, '') = STOCK.ST_SPR_ID)
+                </otherwise>
+            </choose>
+        </if>
+    </where>
+</sql>
+
+	<select id="selectStockListByCtgr" resultType="kr.or.ddit.Infra.vo.stockVO">
+		SELECT 
+	    ST_ID, ST_NM, ST_CTGR
+	    , ST_PRICE, ST_UNIT, ST_LOC
+	    , ST_QUANTITY, ST_STATUS, ST_DESC
+	    , ST_CRT_DT, ST_SPR_ID
+		FROM STOCK
+	</select>
+
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM STOCK
+		<include refid="searchFrag" />
+	</select>
+	
+
+<select id="selectStockList" resultType="stockVO"
+	parameterType="PaginationInfo">
+	SELECT B.*
+	FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+			SELECT
+			st_id,
+			st_nm,
+			st_ctgr,
+			code_nm "commonCode.codeNm",
+			st_price,
+			st_unit,
+			st_loc,
+			st_quantity,
+			st_status,
+			st_desc,
+			st_crt_dt,
+			spr_nm "supplier.sprNm"
+			FROM stock 
+			INNER JOIN common_code cc ON (st_ctgr = code_id)
+			LEFT JOIN supplier  ON (st_spr_id = spr_id)
+
+			<include refid="searchFrag" />
+			ORDER BY st_id ASC
+		) A
+	) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]>
+</select>
+
+	<select id="selectOne" resultType="stockVO">
+		SELECT
+		ST_ID,
+		ST_NM,
+		ST_CTGR,
+		code_nm "commonCode.codeNm",
+		ST_PRICE,
+		ST_UNIT,
+		ST_LOC,
+		ST_QUANTITY,
+		ST_STATUS,
+		ST_CRT_DT,
+		ST_SPR_ID,
+		SPR_NM "supplier.sprNm"
+		FROM
+		STOCK INNER JOIN COMMON_CODE ON (ST_CTGR = CODE_ID)
+			  LEFT JOIN supplier ON (st_spr_id = spr_id)
+		WHERE
+		ST_ID = #{stId}
+
+
+	</select>
+
+
+	<insert id="insertStock" parameterType="stockVO">
+
+		<selectKey order="BEFORE" resultType="string"
+			keyProperty="stId">
+			SELECT 'ST_' || #{stCtgr} || '_' || LPAD(NVL(TO_NUMBER(SUBSTR(MAX(ST_ID),
+			LENGTH(#{stCtgr}) + 6)), 0) + 1, 3, '0')
+			FROM STOCK
+			WHERE ST_CTGR = #{stCtgr}
+		</selectKey>
+
+		INSERT INTO STOCK (
+		ST_ID,
+		ST_NM,
+		ST_CTGR,
+		ST_PRICE,
+		ST_UNIT,
+		ST_LOC,
+		ST_QUANTITY,
+		ST_STATUS,
+		ST_CRT_DT,
+		ST_SPR_ID
+		) VALUES (
+		#{stId, jdbcType=VARCHAR}
+		, #{stNm,jdbcType=VARCHAR}
+		, #{stCtgr,jdbcType=VARCHAR}
+		, #{stPrice,jdbcType=NUMERIC}
+		, #{stUnit,jdbcType=VARCHAR}
+		, #{stLoc,jdbcType=VARCHAR}
+		, #{stQuantity,jdbcType=NUMERIC}
+		, #{stStatus,jdbcType=VARCHAR}
+		, SYSDATE
+		, #{stSprId,jdbcType=VARCHAR}
+		)
+	</insert>
+
+	<update id="updateStock" parameterType="stockVO">
+		UPDATE STOCK
+		SET
+		ST_PRICE = #{stPrice,jdbcType=NUMERIC},
+		ST_UNIT = #{stUnit,jdbcType=VARCHAR},
+		ST_QUANTITY =#{stQuantity,jdbcType=NUMERIC},
+		ST_LOC = #{stLoc,jdbcType=VARCHAR},
+		ST_SPR_ID = #{stSprId,jdbcType=VARCHAR}
+		WHERE
+		ST_ID = #{stId}
+		
+	</update>
+	
+	<select id="selectStockListToReq" resultType="stockVO" >
+		SELECT
+			st_id,
+			st_nm,
+			st_ctgr,
+			code_nm "commonCode.codeNm",
+			st_quantity
+			FROM stock 
+			INNER JOIN common_code ON (st_ctgr = code_id)
+			WHERE ST_NM LIKE '%' || #{stNm} || '%'
+	</select>
+</mapper>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.hr.attendance.dao.AttendanceDAO">
+
+	<select id="selectToday" parameterType="string" resultType="AttendanceVO">
+		SELECT
+			ATT_ID
+			, ATT_DT
+			, ATT_IN_TIME
+			, ATT_OUT_TIME
+			, ATT_WORK_HOURS
+			, ATT_MEMO
+			, ATT_EMP_NO
+			, ATT_CD
+		FROM ATTENDANCE
+		WHERE TRUNC(ATT_DT) = TRUNC(SYSDATE) AND ATT_EMP_NO = #{empNo}
+	</select>
+	
+	<insert id="insertAtte" parameterType="kr.or.ddit.hr.vo.AttendanceVO">
+		INSERT INTO attendance (
+		    att_id,
+		    att_dt,
+		    att_in_time,
+		    att_emp_no,
+		    att_cd
+		) VALUES (
+			'ATT' || ATT_SEQ.NEXTVAL
+			, TRUNC(SYSDATE)
+			, #{attInTime,jdbcType=TIMESTAMP}
+			, #{attEmpNo,jdbcType=CHAR}
+		    , #{attCd,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<update id="updateAtte" parameterType="kr.or.ddit.hr.vo.AttendanceVO">
+	
+		UPDATE ATTENDANCE
+		SET
+			ATT_OUT_TIME = #{attOutTime, jdbcType=VARCHAR}
+			, ATT_CD = #{attCd, jdbcType=VARCHAR}
+			, ATT_WORK_HOURS = #{attWorkHours, jdbcType=NUMERIC}
+		WHERE
+			ATT_ID = #{attId}
+	
+	</update>
+	
+	<insert id="recordCheckIn" parameterType="java.lang.String">
+        INSERT INTO attendance (ATT_DT, ATT_IN_TIME)
+        VALUES (SYSDATE, #{currentTime})
+    </insert>
+    
+    <update id="recordCheckOut" parameterType="java.lang.String">
+        UPDATE attendance
+        SET ATT_OUT_TIME = #{currentTime}, ATT_WORK_HOURS = (SELECT TIMESTAMPDIFF(SECOND, ATT_IN_TIME, #{currentTime}))
+        WHERE ATT_OUT_TIME IS NULL
+    </update>
+    
+    <insert id="insertAtteVac" parameterType="AttendanceVO">
+    	INSERT INTO attendance (
+		    att_id,
+		    att_emp_no,
+		    att_dt,
+		    att_cd,
+		    att_memo
+		) VALUES (
+			'ATT' || ATT_SEQ.NEXTVAL
+			, #{attEmpNo,jdbcType=CHAR}
+			, #{attDt,jdbcType=DATE}
+		    , #{attCd,jdbcType=VARCHAR}
+		    , #{attMemo,jdbcType=VARCHAR}
+		)
+    </insert>
+    
+    <select id="selectCountWork" resultType="long" parameterType="String">
+		SELECT SUM(ATT_WORK_HOURS) FROM ATTENDANCE
+		WHERE ATT_EMP_NO = #{empNo}
+		AND ATT_DT BETWEEN TRUNC(SYSDATE, 'IW')  AND TRUNC(SYSDATE)
+    </select>
+    
+    <select id="selectCountWorkMonth" resultType="long" parameterType="String">
+  		SELECT SUM(ATT_WORK_HOURS) FROM ATTENDANCE
+  	    WHERE ATT_EMP_NO = #{empNo}
+  		AND ATT_DT BETWEEN TRUNC(SYSDATE, 'MM') AND LAST_DAY(TRUNC(SYSDATE, 'MM'))
+	</select>
+    
+
+</mapper>

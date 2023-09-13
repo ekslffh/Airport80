@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.common.employee.dao.EmployeeDAO">
+   <sql id="searchFrag">
+      <where>
+           <if test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+              <choose>
+                 <when test="simpleCondition.searchType eq 'name'">
+                    INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+                 </when>
+                 <when test="simpleCondition.searchType eq 'dept'">
+                    INSTR(
+                        CASE #{simpleCondition.searchWord}
+                            WHEN '사무' THEN '1201'
+                            WHEN '운영' THEN '1202'
+                            WHEN '보안' THEN '1203'
+                            WHEN '인프라' THEN '1204'
+                            ELSE ''
+                        END,
+                        EMP_DEPT_NO
+                       ) > 0
+                 </when>
+                 <when test="simpleCondition.searchType eq 'role'">
+                    INSTR(EMP_ROLE_NM, #{simpleCondition.searchWord}) > 0
+                 </when>
+                 <otherwise>
+                    INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+                    OR
+                    INSTR(
+                        CASE #{simpleCondition.searchWord}
+                            WHEN '사무' THEN '1201'
+                            WHEN '운영' THEN '1202'
+                            WHEN '보안' THEN '1203'
+                            WHEN '인프라' THEN '1204'
+                            ELSE ''
+                        END,
+                        EMP_DEPT_NO
+                       ) > 0                    
+                       OR
+                    INSTR(EMP_ROLE_NM, #{simpleCondition.searchWord}) > 0
+                 </otherwise>
+              </choose>
+           </if>
+        </where>
+   </sql>
+   
+   <select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.vo.PaginationInfo">
+      SELECT COUNT(*)
+      FROM EMPLOYEE
+      <include refid="searchFrag" />
+        WHERE EMP_STATUS != 4
+   </select>
+
+   <resultMap type="EmployeeVO" id="empMap" autoMapping="true">
+      <id property="empNo" column="EMP_NO" />
+      <association property="vacstatusVO" javaType="kr.or.ddit.hr.vo.VacStatusVO" autoMapping="true"/>
+      <association property="department" javaType="DepartmentVO"  autoMapping="true" />
+   </resultMap>
+   <select id="selectEmpList" resultMap="empMap" parameterType="kr.or.ddit.vo.PaginationInfo">
+      WITH VR_VIEW AS(
+          SELECT
+              VR_EMP_NO,
+              SUM(CASE WHEN VR_TYPE = 'SK' THEN 1 ELSE 0 END) AS SK_COUNT,
+              SUM(CASE WHEN VR_TYPE = 'PD' THEN 1 ELSE 0 END) AS PD_COUNT,
+              SUM(CASE WHEN VR_TYPE = 'AL' THEN 1 ELSE 0 END) AS AL_COUNT,
+              SUM(CASE WHEN VR_TYPE = 'PL' THEN 1 ELSE 0 END) AS PL_COUNT,
+              SUM(CASE WHEN VR_TYPE = 'FE' THEN 1 ELSE 0 END) AS FE_COUNT,
+              SUM(CASE WHEN VR_TYPE = 'UP' THEN 1 ELSE 0 END) AS UP_COUNT
+          FROM VACATION_REQ
+           WHERE VR_STATUS = 'APPR'
+          GROUP BY VR_EMP_NO
+      )
+      SELECT B.*
+              , COALESCE(VR_VIEW.SK_COUNT, 0) AS SK_CNT, COALESCE(VR_VIEW.PD_COUNT, 0) AS PD_CNT, COALESCE(VR_VIEW.AL_COUNT, 0) AS AL_CNT, COALESCE(VR_VIEW.PL_COUNT, 0) AS PL_CNT, COALESCE(VR_VIEW.FE_COUNT, 0) AS FE_CNT, COALESCE(VR_VIEW.UP_COUNT, 0) AS UP_CNT
+          FROM (
+              SELECT ROWNUM RNUM, A.*
+              FROM (
+                  SELECT
+                      EMP_NO, EMP_NM, EMP_DEPT_NO, EMP_TEAM, EMP_ROLE_NM, 
+                      EMP_STATUS, EMP_EMAIL, EMP_CONTACT, EMP_JOIN_DT, EMP_CRT_DT
+                  FROM EMPLOYEE
+               <include refid="searchFrag" />
+              WHERE EMP_STATUS != 4
+              ORDER BY EMP_CRT_DT DESC
+          ) A
+         
+      ) B
+      LEFT OUTER JOIN VR_VIEW ON (VR_EMP_NO = EMP_NO)
+      <![CDATA[   
+       WHERE RNUM >= #{startRow} AND RNUM <= #{endRow} 
+       ]]> 
+   </select>
+   
+   <resultMap type="EmployeeVO" id="empListMap" autoMapping="true">
+      <id property="empNo" column="EMP_NO" />
+      <association property="department" javaType="DepartmentVO" autoMapping="true" />
+   </resultMap>
+   
+   <select id="selectAllNoPaging">
+      SELECT
+          EMP_NO, EMP_NM, EMP_BIR
+          , EMP_GENDER, EMP_EMAIL, EMP_ADDR
+          , EMP_CONTACT, EMP_STATUS, EMP_JOIN_DT
+          , EMP_RESIGN_DT, EMP_CRT_DT, EMP_UPD_DT
+          , EMP_DEPT_NO, EMP_ROLE_NM, EMP_CTR_FILE
+          , EMP_TEAM, EMP_ACCNUM
+          , DEPT_NO, DEPT_NM, DEPT_LOC
+          , DEPT_DESC, DEPT_CRT_DT, DEPT_MNGER
+      FROM EMPLOYEE
+      INNER JOIN DEPARTMENT ON (EMP_DEPT_NO = DEPT_NO)
+   </select>
+   
+   <resultMap type="EmployeeVO" id="empAuthMap" autoMapping="true">
+      <id property="empNo" column="EMP_NO" />
+      <association property="department" javaType="DepartmentVO" autoMapping="true" />
+      <association property="fileGroup" javaType="AtchFileVO">
+			<id property="atchFileId" column="ATCH_FILE_ID" />
+			<result property="creatDt" column="CREAT_DT" />
+			<result property="useAt" column="USE_AT" />
+			<collection property="detailList"
+				ofType="AtchFileDetailVO" autoMapping="true">
+				<id property="atchFileId" column="ATCH_FILE_ID" />
+				<id property="fiSn" column="FI_SN" />
+			</collection>
+		</association>
+   </resultMap>
+
+   <select id="selectEmp" resultMap="empAuthMap">
+  	  WITH ATCH_FILE_VIEW AS (
+		SELECT * FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL USING (ATCH_FILE_ID)
+	  )
+      SELECT
+         EMP_NO, EMP_NM, EMP_BIR,
+         EMP_GENDER, EMP_EMAIL, EMP_ADDR,
+         EMP_CONTACT, EMP_STATUS, EMP_JOIN_DT,
+         EMP_RESIGN_DT, EMP_CRT_DT, EMP_UPD_DT,
+         EMP_DEPT_NO, EMP_ROLE_NM, EMP_CTR_FILE, EMP_EMAIL_DO,
+         EMP_TEAM, EMP_ACCNUM,EMP_EMAILPASS,EMP_ACCNUM, EMP_ACCBANK, EMP_DETAIL_ADDR, EMP_POST
+         , DEPT_NM
+         , EMP_ATCH_FILE
+		 , ATCH_FILE_ID, CREAT_DT, USE_AT
+		 , FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE
+      FROM EMPLOYEE
+      INNER JOIN DEPARTMENT ON (EMP_DEPT_NO = DEPT_NO)
+      LEFT OUTER JOIN ATCH_FILE_VIEW ON (ATCH_FILE_ID = EMP_ATCH_FILE)
+      WHERE EMP_NO = #{empNo}
+   </select>
+
+   <insert id="insertEmp" parameterType="EmployeeVO">
+   
+      <selectKey order="BEFORE" keyProperty="empNo" resultType="string">
+          SELECT CONCAT(#{empDeptNo, jdbcType=CHAR}, LPAD(EMP_SEQ.NEXTVAL, 4, '0')) 
+          FROM DUAL
+      </selectKey>
+      INSERT INTO employee (
+         emp_no,
+         emp_nm,
+         emp_bir,
+         emp_gender,
+         emp_email,
+         emp_addr,
+         emp_contact,
+         emp_join_dt,
+         emp_dept_no,
+         emp_role_nm,
+         emp_accnum,
+         emp_team,
+         emp_status,
+         emp_ctr_file,
+         emp_accbank,
+         emp_detail_addr,
+         emp_post,
+         emp_email_do,
+         emp_atch_file
+         ) VALUES (
+         #{empNo,jdbcType=CHAR}
+         , #{empNm,jdbcType=VARCHAR}
+         , #{empBir,jdbcType=DATE}
+         , #{empGender,jdbcType=CHAR}
+         , #{empEmail,jdbcType=VARCHAR}
+         , #{empAddr,jdbcType=VARCHAR}
+         , #{empContact,jdbcType=VARCHAR}
+         , #{empJoinDt,jdbcType=DATE}
+         , #{empDeptNo,jdbcType=CHAR}
+         , #{empRoleNm,jdbcType=VARCHAR}
+         , #{empAccnum,jdbcType=NUMERIC}
+         , #{empTeam,jdbcType=VARCHAR}
+         , '0'
+         , #{empCtrFile,jdbcType=VARCHAR}
+         , #{empAccbank,jdbcType=VARCHAR}
+         , #{empDetailAddr,jdbcType=VARCHAR}
+         , #{empPost,jdbcType=VARCHAR}
+         , #{empEmailDo,jdbcType=VARCHAR}
+         , #{atchFileId,jdbcType=CHAR}
+         )
+   </insert>
+   
+   <update id="updateEmp" parameterType="EmployeeVO">
+      UPDATE employee
+       SET
+           EMP_EMAIL = #{empEmail,jdbcType=VARCHAR}
+           , EMP_EMAIL_DO = #{empEmailDo,jdbcType=VARCHAR}
+           , EMP_ADDR = #{empAddr,jdbcType=VARCHAR}
+           , EMP_DETAIL_ADDR = #{empDetailAddr,jdbcType=VARCHAR}
+           , EMP_POST = #{empPost,jdbcType=VARCHAR}
+           , EMP_CONTACT = #{empContact,jdbcType=VARCHAR}
+           , EMP_STATUS = #{empStatus,jdbcType=CHAR}
+           , EMP_JOIN_DT = #{empJoinDt,jdbcType=DATE}
+           , EMP_RESIGN_DT =
+               CASE
+                   WHEN #{empStatus,jdbcType=CHAR} = '4' THEN SYSDATE
+                   ELSE #{empResignDt,jdbcType=DATE}
+               END
+           , EMP_UPD_DT = SYSDATE
+           , EMP_DEPT_NO = #{empDeptNo,jdbcType=CHAR}
+           , EMP_ROLE_NM = #{empRoleNm,jdbcType=VARCHAR}
+           , EMP_CTR_FILE = #{empCtrFile,jdbcType=VARCHAR}
+           , EMP_TEAM = #{empTeam,jdbcType=VARCHAR}
+           , EMP_ACCNUM = #{empAccnum,jdbcType=NUMERIC}
+           , EMP_ATCH_FILE = #{atchFileId,jdbcType=CHAR}
+       WHERE
+           EMP_NO = #{empNo}
+   </update>
+
+   <update id="updateEmpStatus" parameterType="EmployeeVO">
+      UPDATE EMPLOYEE
+      SET
+         EMP_STATUS = #{empStatus,jdbcType=CHAR}
+         , EMP_RESIGN_DT = SYSDATE
+      WHERE
+         EMP_NO = #{empNo,jdbcType=CHAR}
+   </update>
+
+
+	<resultMap type="EmployeeVO" id="empPageMap" autoMapping="true">
+		<id property="empNo" column="EMP_NO" />
+		<association property="fileGroup" javaType="AtchFileVO">
+			<id property="atchFileId" column="ATCH_FILE_ID" />
+			<result property="creatDt" column="CREAT_DT" />
+			<result property="useAt" column="USE_AT" />
+			<collection property="detailList"
+				ofType="AtchFileDetailVO" autoMapping="true">
+				<id property="atchFileId" column="ATCH_FILE_ID" />
+				<id property="fiSn" column="FI_SN" />
+			</collection>
+		</association>
+	</resultMap>
+   
+   <select id="selectEmpMy" resultMap="empPageMap" >
+		WITH ATCH_FILE_VIEW AS (
+		SELECT * FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL USING (ATCH_FILE_ID)
+		)
+		SELECT
+		EMP_NO
+		,EMP_NM
+		,EMP_EMAIL
+		,EMP_EMAIL_DO
+		,EMP_ADDR
+		,EMP_DETAIL_ADDR
+		,EMP_POST
+		,EMP_CONTACT
+		,EMP_JOIN_DT
+		,EMP_DEPT_NO
+		,EMP_ROLE_NM
+		,EMP_TEAM
+		,EMP_ATCH_FILE
+		, ATCH_FILE_ID, CREAT_DT, USE_AT
+		, ATCH_FILE_ID, FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE,
+		FI_MIME
+		FROM EMPLOYEE
+		LEFT OUTER JOIN ATCH_FILE_VIEW ON (ATCH_FILE_ID = EMP_ATCH_FILE)
+		WHERE EMP_NO = #{empNo}
+   </select>
+
+</mapper>

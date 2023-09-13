@@ -1,0 +1,1277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.Infra.rncSchedule.dao.rncScheduleDAO">
+
+<!--  유지보수 일정등록 -->
+<insert id="insertRncSchedule" parameterType="rncScheduleVO">
+<selectKey order="BEFORE" resultType="string" keyProperty="rsId">
+     SELECT 'RS' || TO_CHAR(RS_ID_SEQ.NEXTVAL, 'FM00009') FROM DUAL
+</selectKey>
+ INSERT INTO RNC_SCHEDULE (
+    RS_ID,
+    RS_ZONE,
+    RS_FC,
+    RS_TYPE,
+    RS_TITLE,
+    RS_CONTENT,
+    RS_START_TS,
+    RS_END_TS,
+    RS_CRT_TS,
+    RS_UPD_TS,
+    RS_EMP_NO,
+    RS_SU_ID,
+    RS_DIV
+) VALUES (
+  #{rsId,jdbcType=VARCHAR}
+, #{rsZone,jdbcType=VARCHAR}
+, #{rsFc,jdbcType=VARCHAR}
+, #{rsType,jdbcType=VARCHAR}
+, #{rsTitle,jdbcType=VARCHAR}
+, #{rsContent,jdbcType=VARCHAR}
+, #{rsStartTs,jdbcType=TIMESTAMP}
+, #{rsEndTs,jdbcType=TIMESTAMP}
+, SYSTIMESTAMP
+, #{rsUpdTs,jdbcType=TIMESTAMP}
+, #{rsEmpNo,jdbcType=CHAR}
+, #{rsSuId,jdbcType=VARCHAR}
+, #{rsDiv,jdbcType=VARCHAR}
+)
+</insert>
+
+<!-- 청소 일정등록 -->
+<insert id="insertRecSchedule" parameterType="rncScheduleVO">
+<selectKey order="BEFORE" resultType="string" keyProperty="rsId">
+     SELECT 'RS' || TO_CHAR(RS_ID_SEQ.NEXTVAL, 'FM00009') FROM DUAL
+</selectKey>
+ INSERT INTO RNC_SCHEDULE (
+    RS_ID,
+    RS_ZONE,
+    RS_FC,
+    RS_TYPE,
+    RS_TITLE,
+    RS_CONTENT,
+    RS_START_TS,
+    RS_END_TS,
+    RS_CRT_TS,
+    RS_UPD_TS,
+    RS_EMP_NO,
+    RS_SU_ID,
+    RS_DIV
+) VALUES (
+  #{rsId,jdbcType=VARCHAR}
+, #{rsZone,jdbcType=VARCHAR}
+, #{rsFc,jdbcType=VARCHAR}
+, 'REC'
+, #{rsTitle,jdbcType=VARCHAR}
+, #{rsContent,jdbcType=VARCHAR}
+, #{rsStartTs,jdbcType=TIMESTAMP}
+, #{rsEndTs,jdbcType=TIMESTAMP}
+, SYSTIMESTAMP
+, #{rsUpdTs,jdbcType=TIMESTAMP}
+, #{rsEmpNo,jdbcType=CHAR}
+, #{rsSuId,jdbcType=VARCHAR}
+, #{rsDiv,jdbcType=VARCHAR}
+)
+</insert>
+<!-- <update id="updateRrRsId" parameterType="String"> -->
+<!-- 	UPDATE RNC_REQ -->
+<!-- 	SET -->
+<!-- 	RR_RS_ID = #{rrRsId, jdbcType=VARCHAR} -->
+<!-- 	WHERE -->
+<!-- 	RR_ID = #{rrId, jdbcType=VARCHAR} -->
+<!-- </update> -->
+
+<!--  유지보수 전체조회  -->
+<select id="selectScheduleList" resultType="rncScheduleVO" parameterType="PaginationInfo">
+SELECT B.* 
+FROM (
+SELECT ROWNUM RNUM, A.*
+		FROM (
+    SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "common.codeNm", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC, 
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID 
+        <include refid="searchFrag" />
+        ORDER BY RS_ID DESC
+    )A
+) B
+	<![CDATA[    
+WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]> 
+</select>
+
+
+
+<!-- 청소 일정 전체조회 -->
+<select id="selectRecScheduleList" resultType="rncScheduleVO" parameterType="PaginationInfo">
+SELECT B.* 
+FROM (
+SELECT ROWNUM RNUM, A.*
+		FROM (
+    SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "common.codeNm", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC, 
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV 
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID 
+     <include refid="searchFragByREC" />
+        ORDER BY RS_ID DESC
+    )A
+) B
+</select>
+
+
+<!-- 검색조건 RNC -->
+<sql id="searchFrag">
+		
+			<!-- 		    simpleCondition.tab 값에 따라 RR_STTS 조건을 추가 -->
+			 
+		    <choose>
+		       <when test="simpleCondition.tab == 0">
+        WHERE RNC_SCHEDULE.RS_ID IN (
+            SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('WT','PG', 'DL', 'WO','PC')
+            AND (RR_TYPE = 'REF' OR RR_TYPE = 'OS')
+            AND RR_STTS = 'WT'
+            <if test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+                <choose>
+                    <when test="simpleCondition.searchType eq 'id'">
+                        AND INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'zone'">
+                        AND EXISTS (
+                            SELECT 1
+                            FROM ZONE
+                            WHERE
+                            INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                            AND ZONE_CD = RS_ZONE
+                        )
+                    </when>
+                    <when test="simpleCondition.searchType eq 'content'">
+                        AND INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'date'">
+                        AND INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <otherwise>
+                        AND (
+                            INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                            OR
+                            EXISTS (
+                                SELECT 1
+                                FROM ZONE
+                                WHERE
+                                INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                                AND ZONE_CD = RS_ZONE
+                            )
+                            OR
+                            INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                            OR
+                            INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                        )
+                    </otherwise>
+                </choose>
+            </if>
+        )
+    </when>
+		        <when test="simpleCondition.tab == 1">
+		         WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('WT','PG', 'DL', 'WO','PC')
+       AND (RR_TYPE = 'REF' OR RR_TYPE = 'OS')
+		            AND RR_STTS = 'PG')
+		              <if test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+                <choose>
+                    <when test="simpleCondition.searchType eq 'id'">
+                        AND INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'zone'">
+                        AND EXISTS (
+                            SELECT 1
+                            FROM ZONE
+                            WHERE
+                            INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                            AND ZONE_CD = RS_ZONE
+                        )
+                    </when>
+                    <when test="simpleCondition.searchType eq 'content'">
+                        AND INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'date'">
+                        AND INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <otherwise>
+                        AND (
+                            INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                            OR
+                            EXISTS (
+                                SELECT 1
+                                FROM ZONE
+                                WHERE
+                                INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                                AND ZONE_CD = RS_ZONE
+                            )
+                            OR
+                            INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                            OR
+                            INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                        )
+                    </otherwise>
+                </choose>
+            </if>
+		        </when>
+		        <when test="simpleCondition.tab == 2">
+					 WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('WT','PG', 'DL', 'WO','PC')
+        AND (RR_TYPE = 'REF' OR RR_TYPE = 'OS')
+		            AND RR_STTS = 'DL')
+		              <if test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+                <choose>
+                    <when test="simpleCondition.searchType eq 'id'">
+                        AND INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'zone'">
+                        AND EXISTS (
+                            SELECT 1
+                            FROM ZONE
+                            WHERE
+                            INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                            AND ZONE_CD = RS_ZONE
+                        )
+                    </when>
+                    <when test="simpleCondition.searchType eq 'content'">
+                        AND INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'date'">
+                        AND INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <otherwise>
+                        AND (
+                            INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                            OR
+                            EXISTS (
+                                SELECT 1
+                                FROM ZONE
+                                WHERE
+                                INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                                AND ZONE_CD = RS_ZONE
+                            )
+                            OR
+                            INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                            OR
+                            INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                        )
+                    </otherwise>
+                </choose>
+            </if>
+		        </when>
+		        <when test="simpleCondition.tab == 3">
+		             WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('WT','PG', 'DL', 'WO')
+        AND RS_TYPE='OS'
+          <if test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+                <choose>
+                    <when test="simpleCondition.searchType eq 'id'">
+                        AND INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'zone'">
+                        AND EXISTS (
+                            SELECT 1
+                            FROM ZONE
+                            WHERE
+                            INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                            AND ZONE_CD = RS_ZONE
+                        )
+                    </when>
+                    <when test="simpleCondition.searchType eq 'content'">
+                        AND INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'date'">
+                        AND INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <otherwise>
+                        AND (
+                            INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                            OR
+                            EXISTS (
+                                SELECT 1
+                                FROM ZONE
+                                WHERE
+                                INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                                AND ZONE_CD = RS_ZONE
+                            )
+                            OR
+                            INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                            OR
+                            INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                        )
+                    </otherwise>
+                </choose>
+            </if>
+		            )
+		        </when>
+		        <when test="simpleCondition.tab == 4">
+		             WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('WT','PG', 'DL', 'WO','PC')
+        AND (RR_TYPE = 'REF' OR RR_TYPE = 'OS')
+		            AND RR_STTS = 'PC'
+		              <if test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+                <choose>
+                    <when test="simpleCondition.searchType eq 'id'">
+                        AND INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'zone'">
+                        AND EXISTS (
+                            SELECT 1
+                            FROM ZONE
+                            WHERE
+                            INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                            AND ZONE_CD = RS_ZONE
+                        )
+                    </when>
+                    <when test="simpleCondition.searchType eq 'content'">
+                        AND INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'date'">
+                        AND INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <otherwise>
+                        AND (
+                            INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                            OR
+                            EXISTS (
+                                SELECT 1
+                                FROM ZONE
+                                WHERE
+                                INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                                AND ZONE_CD = RS_ZONE
+                            )
+                            OR
+                            INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                            OR
+                            INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                        )
+                    </otherwise>
+                </choose>
+            </if>
+		            )
+		        </when>
+		    </choose>
+	</sql>
+	
+	<!-- 검색조건 REC -->
+<sql id="searchFragByREC">
+			<!-- 		    simpleCondition.tab 값에 따라 RR_STTS 조건을 추가 -->
+			 
+		    <choose>
+		       <when test="simpleCondition.tab == 0">
+        WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE
+         RR_TYPE='REC'
+            AND RR_STTS = 'WT'
+            <if test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+                <choose>
+                    <when test="simpleCondition.searchType eq 'id'">
+                        AND INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'zone'">
+                        AND EXISTS (
+                            SELECT 1
+                            FROM ZONE
+                            WHERE
+                            INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                            AND ZONE_CD = RS_ZONE
+                        )
+                    </when>
+                    <when test="simpleCondition.searchType eq 'content'">
+                        AND INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'date'">
+                        AND INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <otherwise>
+                        AND (
+                            INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                            OR
+                            EXISTS (
+                                SELECT 1
+                                FROM ZONE
+                                WHERE
+                                INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                                AND ZONE_CD = RS_ZONE
+                            )
+                            OR
+                            INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                            OR
+                            INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                        )
+                    </otherwise>
+                </choose>
+            </if>
+        )
+    </when>
+		        <when test="simpleCondition.tab == 1">
+		        WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE 
+       RR_TYPE='REC'
+		            AND RR_STTS = 'PG'
+		              <if test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+                <choose>
+                    <when test="simpleCondition.searchType eq 'id'">
+                        AND INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'zone'">
+                        AND EXISTS (
+                            SELECT 1
+                            FROM ZONE
+                            WHERE
+                            INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                            AND ZONE_CD = RS_ZONE
+                        )
+                    </when>
+                    <when test="simpleCondition.searchType eq 'content'">
+                        AND INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'date'">
+                        AND INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <otherwise>
+                        AND (
+                            INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                            OR
+                            EXISTS (
+                                SELECT 1
+                                FROM ZONE
+                                WHERE
+                                INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                                AND ZONE_CD = RS_ZONE
+                            )
+                            OR
+                            INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                            OR
+                            INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                        )
+                    </otherwise>
+                </choose>
+            </if>
+            )
+		        </when>
+		        <when test="simpleCondition.tab == 2">
+				   WHERE RNC_SCHEDULE.RS_ID IN (
+				     SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS ='PC'
+         AND RR_TYPE='REC'
+		              <if test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+                <choose>
+                    <when test="simpleCondition.searchType eq 'id'">
+                        AND INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'zone'">
+                        AND EXISTS (
+                            SELECT 1
+                            FROM ZONE
+                            WHERE
+                            INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                            AND ZONE_CD = RS_ZONE
+                        )
+                    </when>
+                    <when test="simpleCondition.searchType eq 'content'">
+                        AND INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <when test="simpleCondition.searchType eq 'date'">
+                        AND INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                    </when>
+                    <otherwise>
+                        AND (
+                            INSTR(RS_ID, #{simpleCondition.searchWord}) > 0
+                            OR
+                            EXISTS (
+                                SELECT 1
+                                FROM ZONE
+                                WHERE
+                                INSTR(ZONE_FLOOR || '층 ' || ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+                                AND ZONE_CD = RS_ZONE
+                            )
+                            OR
+                            INSTR(RS_CONTENT, #{simpleCondition.searchWord}) > 0
+                            OR
+                            INSTR(RS_CRT_TS, #{simpleCondition.searchWord}) > 0
+                        )
+                    </otherwise>
+                </choose>
+            </if>
+		            )
+		        </when>
+		    </choose>
+	</sql>
+<!-- 처리중으로 상태변경-유지보수 -->
+	<update id="updateStts" parameterType="rncReqVO" >
+		UPDATE RNC_REQ
+		SET
+		RR_STTS = 'PG',
+		RR_RS_ID = #{rrRsId}
+		WHERE
+		RR_ID = #{rrId} 
+	</update>
+<!--처리중으로 상태변경-점검일지  -->
+	<update id="updateSttsRL" parameterType="repairLogVO" >
+		UPDATE REPAIR_LOG
+		SET
+		RL_IS = 'PG',
+		RL_RS_ID = #{rlRsId}
+		WHERE
+		RL_NO = #{rlNo}
+	</update>
+	
+<!-- 일정1개조회 -->
+	<select id="selectScheduleOne" parameterType="String" resultType="rncScheduleVO">
+		SELECT
+			    RS_ID,
+			    RS_ZONE,
+			    ZONE_FLOOR "zone.zoneFloor",
+			    ZONE_CTGR "zone.zoneCtgr",
+			    EMP_NM "employee.empNm",
+			    RT.CODE_NM "RT_CODE_NM",
+			    RD.CODE_NM "RD_CODE_NM",
+			    RS_FC,
+			    RS_TYPE,
+			    RS_TITLE,
+			    RS_CONTENT,
+			    RS_START_TS,
+			    RS_END_TS,
+			    RS_CRT_TS,
+			    RS_UPD_TS,
+			    RS_EMP_NO,
+			    RS_SU_ID,
+			    RS_DIV,
+			    RS.CODE_NM "RS_CODE_NM"
+			FROM
+			    RNC_SCHEDULE
+			INNER JOIN ZONE ON (RS_ZONE=ZONE_CD)
+			LEFT JOIN EMPLOYEE ON (RS_EMP_NO = EMP_NO)
+			LEFT JOIN COMMON_CODE RT ON (RS_TYPE = RT.CODE_ID)
+			LEFT JOIN COMMON_CODE RD ON (RS_DIV = RD.CODE_ID)
+            LEFT JOIN RNC_REQ ON (RS_ID = RR_RS_ID) 
+            LEFT JOIN COMMON_CODE RS ON (RR_STTS =RS.CODE_ID)
+			WHERE 
+			RS_ID = #{rsId}
+	</select>
+	
+	<!-- 유지보수 일정 전체조회 -->
+<select id="selectScheduleListNP" resultType="rncScheduleVO" >
+SELECT B.* 
+FROM (
+SELECT ROWNUM RNUM, A.*
+		FROM (
+    SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "common.codeNm", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC, 
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID 
+    
+    WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('WT','PG', 'DL', 'WO','PC')
+        AND RR_TYPE='REF'
+        )
+    )A
+) B
+</select>
+<!-- 	작업완료후 청소 일정 수정  -->
+	<update id="modifyRncSchedule" parameterType="rncScheduleVO">
+			UPDATE RNC_SCHEDULE
+				SET
+				RS_END_TS = #{rsEndTs,jdbcType=TIMESTAMP},
+				RS_UPD_TS = SYSTIMESTAMP,
+				RS_SU_ID = #{rsSuId,jdbcType=VARCHAR}
+				WHERE
+				RS_ID = #{rsId}
+	</update>
+	
+<!-- 	재고사용등록 -->
+	<insert id="insertStockUseList" parameterType="stockUseDetailVO">
+	INSERT INTO STOCK_USE_DETAIL (
+	    ST_ID,
+	    SU_ID,
+	    SO_CNT
+	) VALUES (
+	   #{stId}
+	   , #{suId}
+	   , #{soCnt}
+	)
+	</insert>
+	
+<!-- 일정아이디로 재고사용아이디 조회하기 -->
+	<select id="selectRsSuId" parameterType="String" resultType="rncScheduleVO">
+	SELECT 
+		RS_SU_ID
+	FROM 
+		RNC_SCHEDULE
+	WHERE
+	RS_ID = #{rsId}
+	
+	</select>
+	
+<!-- 	유지보수 일정아이디 생성 -->
+	<insert id="createSuId" parameterType="stockUseVO">
+	<selectKey order="BEFORE" resultType="string" keyProperty="suId">
+     		SELECT 'SU' || TO_CHAR(RS_SU_ID_SEQ.NEXTVAL, 'FM00009') FROM DUAL
+		</selectKey>
+		INSERT INTO STOCK_USE(
+		SU_ID
+		)VALUES (
+		#{suId}
+		)
+	</insert>
+	
+<!-- 	사용재고 수량 업데이트 -->
+	<update id="updateStockCnt" parameterType="stockVO">
+		UPDATE STOCK
+		SET
+		ST_QUANTITY = ST_QUANTITY - #{stQuantity,jdbcType=NUMERIC}
+		WHERE
+		ST_ID = #{stId}
+	</update>
+	
+<!-- 	처리완료시 상태변경 -->
+	<update id="updateSttsPC" parameterType="String">
+		UPDATE RNC_REQ
+		SET RR_STTS = 'PC'
+		WHERE RR_RS_ID = (SELECT RS_ID FROM RNC_SCHEDULE WHERE RS_ID = #{rsId})
+	</update>
+	
+<!-- 대기중 리스트 조회 -유지보수 -->
+<select id="selectScheduleWt" resultType="rncScheduleVO" parameterType="PaginationInfo" >
+SELECT B.* 
+FROM (
+SELECT ROWNUM RNUM, A.*
+		FROM (
+         SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "RT_CODE_NM", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC, 
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV,
+        RR_STTS,
+        RR_TYPE,
+        (SELECT CODE_NM FROM COMMON_CODE CC WHERE CC.CODE_ID = RR_STTS ) AS RR_STTS_NM,
+        (SELECT CODE_NM FROM COMMON_CODE DD WHERE DD.CODE_ID = RR_TYPE) AS RR_TYPE_NM
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+      WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('WT')
+        AND RR_TYPE='REF'
+        )
+         <include refid="searchFrag" />
+			ORDER BY RS_ID DESC
+    )A
+) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}  
+ 	]]>  
+</select>
+
+<!-- 처리중 리스트 조회 -->
+<select id="selectSchedulePg" resultType="rncScheduleVO" parameterType="PaginationInfo">
+SELECT B.* 
+FROM (
+SELECT ROWNUM RNUM, A.*
+		FROM (
+         SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "RT_CODE_NM", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC, 
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV,
+        RR_STTS,
+        RR_TYPE,
+        (SELECT CODE_NM FROM COMMON_CODE CC WHERE CC.CODE_ID = RR_STTS ) AS RR_STTS_NM,
+        (SELECT CODE_NM FROM COMMON_CODE DD WHERE DD.CODE_ID = RR_TYPE) AS RR_TYPE_NM
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+      WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('PG')
+        AND RR_TYPE='REF'
+        )
+         <include refid="searchFrag" />
+			ORDER BY RS_ID DESC
+    )A
+) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}  
+ 	]]>  
+</select>
+
+<!-- 진행중(지연) 리스트 조회 -->
+<select id="selectScheduleDl" resultType="rncScheduleVO" parameterType="PaginationInfo">
+SELECT B.* 
+FROM (
+SELECT ROWNUM RNUM, A.*
+		FROM (
+         SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "RT_CODE_NM", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC, 
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV,
+        RR_STTS,
+        RR_TYPE,
+        (SELECT CODE_NM FROM COMMON_CODE CC WHERE CC.CODE_ID = RR_STTS ) AS RR_STTS_NM,
+        (SELECT CODE_NM FROM COMMON_CODE DD WHERE DD.CODE_ID = RR_TYPE) AS RR_TYPE_NM
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+      WHERE RNC_SCHEDULE.RS_ID IN (
+    SELECT RR_RS_ID FROM RNC_REQ WHERE 
+    (RR_STTS = 'DL'  
+    AND RR_TYPE='REF')
+        )
+         <include refid="searchFrag" />
+			ORDER BY RS_ID DESC
+    )A
+) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}  
+ 	]]>  
+</select>
+
+<!-- 진행중(지연) 리스트 조회/파라미터X -->
+<select id="selectScheduleDlNP" resultType="rncScheduleVO" >
+         SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "RT_CODE_NM", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC, 
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV,
+        RR_STTS,
+        RR_TYPE,
+        (SELECT CODE_NM FROM COMMON_CODE CC WHERE CC.CODE_ID = RR_STTS ) AS RR_STTS_NM,
+        (SELECT CODE_NM FROM COMMON_CODE DD WHERE DD.CODE_ID = RR_TYPE) AS RR_TYPE_NM
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+      WHERE RNC_SCHEDULE.RS_ID IN (
+    SELECT RR_RS_ID FROM RNC_REQ WHERE 
+    (RR_STTS = 'DL'  
+    AND RR_TYPE='REF')
+        )
+</select>
+<!-- 외주 리스트 조회 -->
+<select id="selectScheduleWo" resultType="rncScheduleVO" parameterType="PaginationInfo">
+SELECT B.* 
+FROM (
+SELECT ROWNUM RNUM, A.*
+		FROM (
+         SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "RT_CODE_NM", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC, 
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV,
+        RR_STTS,
+        RR_TYPE,
+        (SELECT CODE_NM FROM COMMON_CODE CC WHERE CC.CODE_ID = RR_STTS ) AS RR_STTS_NM,
+        (SELECT CODE_NM FROM COMMON_CODE DD WHERE DD.CODE_ID = RR_TYPE) AS RR_TYPE_NM
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+      WHERE RS_TYPE = 'OS'
+       <include refid="searchFrag" />
+			ORDER BY RS_ID DESC
+    )A
+) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}  
+ 	]]>  
+</select>
+
+<!-- 처리완료 리스트 조회 -->
+<select id="selectSchedulePc" resultType="rncScheduleVO" parameterType="PaginationInfo">
+SELECT B.* 
+FROM (
+SELECT ROWNUM RNUM, A.*
+		FROM (
+         SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "RT_CODE_NM", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC, 
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV,
+        RR_STTS,
+        RR_TYPE,
+        (SELECT CODE_NM FROM COMMON_CODE CC WHERE CC.CODE_ID = RR_STTS ) AS RR_STTS_NM,
+        (SELECT CODE_NM FROM COMMON_CODE DD WHERE DD.CODE_ID = RR_TYPE) AS RR_TYPE_NM
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+      WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('PC')
+        AND RR_TYPE='REF'
+        )
+        <include refid="searchFrag" />
+			ORDER BY RS_ID DESC
+    )A
+) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}  
+ 	]]>  
+</select>
+
+<!-- 대기중 조회 -유지보수-  -->
+<select id="selectTotalWt" resultType="long"
+		parameterType="PaginationInfo">
+	SELECT COUNT(*) AS COUNT
+FROM (
+    SELECT RS_ID
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+    WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('WT')
+        AND RR_TYPE='REF'
+    )
+)
+		<include refid="searchFrag" />
+</select>
+
+<!-- 처리중 조회 -유지보수- -->
+<select id="selectTotalPg" resultType="long"
+		parameterType="PaginationInfo">
+	SELECT COUNT(*) AS COUNT
+FROM (
+    SELECT RS_ID
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+    WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('PG')
+        AND RR_TYPE='REF'
+    )
+)
+		<include refid="searchFrag" />
+</select>
+
+<!-- 진행중(지연) 조회 - 유지보수 -->
+<select id="selectTotalDl" resultType="long"
+		parameterType="PaginationInfo">
+	SELECT COUNT(*) AS COUNT
+FROM (
+    SELECT RS_ID
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+    WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('DL')
+        AND RR_TYPE='REF'
+    )
+)
+		<include refid="searchFrag" />
+</select>
+
+<!-- 외주 조회 - 유지보수 -->
+<select id="selectTotalWo" resultType="long"
+		parameterType="PaginationInfo">
+	SELECT COUNT(*) AS COUNT
+FROM (
+    SELECT RS_ID
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+    WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('WO')
+        AND RR_TYPE='REF'
+    )
+)
+		<include refid="searchFrag" />
+</select>
+<!-- 처리완료 조회 -유지보수 -->
+<select id="selectTotalPc" resultType="long"
+		parameterType="PaginationInfo">
+	SELECT COUNT(*) AS COUNT
+FROM (
+    SELECT RS_ID
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+    WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('PC')
+        AND RR_TYPE='REF'
+    )
+)
+		<include refid="searchFrag" />
+</select>
+
+<!-- 일정ID로 상태 조회하기 -유지보수-->
+<select id="searchSttsToRnc" resultType="rncScheduleVO">
+	SELECT 
+	RR_STTS,
+	CODE_NM
+	FROM 
+	RNC_REQ
+	INNER JOIN RNC_SCHEDULE ON (RR_RS_ID = RS_ID)
+	INNER JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+	WHERE 
+	RR_RS_ID = #{rsId}
+</select>
+
+<!-- 일정ID로 상태 조회하기-점검일지 -->
+<select id="searchSttsToRep" resultType="repairLogVO">
+	SELECT 
+	RL_IS,
+	CODE_NM
+	FROM 
+	REPAIR_LOG
+	INNER JOIN RNC_SCHEDULE ON (RL_RS_ID = RS_ID)
+	INNER JOIN COMMON_CODE ON (RL_IS = CODE_ID)
+	WHERE 
+	RL_RS_ID = #{rsId}
+</select>
+
+<!-- 대기중 리스트 조회 -청소일지-->
+<select id="CselectScheduleWt" resultType="rncScheduleVO" parameterType="PaginationInfo" >
+SELECT B.* 
+FROM (
+SELECT ROWNUM RNUM, A.*
+		FROM (
+         SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "RT_CODE_NM", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC,  
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV,
+        RR_STTS,
+        RR_TYPE,
+        (SELECT CODE_NM FROM COMMON_CODE CC WHERE CC.CODE_ID = RR_STTS ) AS RR_STTS_NM,
+        (SELECT CODE_NM FROM COMMON_CODE DD WHERE DD.CODE_ID = RR_TYPE) AS RR_TYPE_NM
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+      WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('WT')
+        AND RR_TYPE='REC'
+        )
+         <include refid="searchFrag" />
+			ORDER BY RS_ID DESC
+    )A
+) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}  
+ 	]]>  
+</select>
+
+<!-- 처리중 리스트 조회-청소일지 -->
+<select id="CselectSchedulePg" resultType="rncScheduleVO" parameterType="PaginationInfo">
+SELECT B.* 
+FROM (
+SELECT ROWNUM RNUM, A.*
+		FROM (
+         SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "RT_CODE_NM", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC, 
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV,
+        RR_STTS,
+        RR_TYPE,
+        (SELECT CODE_NM FROM COMMON_CODE CC WHERE CC.CODE_ID = RR_STTS ) AS RR_STTS_NM,
+        (SELECT CODE_NM FROM COMMON_CODE DD WHERE DD.CODE_ID = RR_TYPE) AS RR_TYPE_NM
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+      WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('PG')
+        AND RR_TYPE='REC'
+        )
+         <include refid="searchFrag" />
+			ORDER BY RS_ID DESC
+    )A
+) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}  
+ 	]]>  
+</select>
+
+<!-- 처리완료 리스트 조회 -청소-->
+<select id="CselectSchedulePc" resultType="rncScheduleVO" parameterType="PaginationInfo">
+SELECT B.* 
+FROM (
+SELECT ROWNUM RNUM, A.*
+		FROM (
+         SELECT 
+        RS_ID, 
+        RS_ZONE, 
+        ZONE_FLOOR "zone.zoneFloor", 
+        ZONE_CTGR "zone.zoneCtgr", 
+        EMP_NM "employee.empNm", 
+        CODE_NM "RT_CODE_NM", 
+        CODE_UPPER "common.codeUpper", 
+        RS_FC, 
+        RS_TYPE, 
+        RS_TITLE, 
+        RS_CONTENT, 
+        RS_START_TS, 
+        RS_END_TS, 
+        RS_CRT_TS, 
+        RS_UPD_TS, 
+        RS_EMP_NO, 
+        RS_SU_ID, 
+        RS_DIV,
+        RR_STTS,
+        RR_TYPE,
+        (SELECT CODE_NM FROM COMMON_CODE CC WHERE CC.CODE_ID = RR_STTS ) AS RR_STTS_NM,
+        (SELECT CODE_NM FROM COMMON_CODE DD WHERE DD.CODE_ID = RR_TYPE) AS RR_TYPE_NM
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+      WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('PC')
+        AND RR_TYPE='REC'
+        )
+        <include refid="searchFrag" />
+			ORDER BY RS_ID DESC
+    )A
+) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}  
+ 	]]>  
+</select>
+<!-- 대기중 조회 -청소-  -->
+<select id="CselectTotalWt" resultType="long"
+		parameterType="PaginationInfo">
+	SELECT COUNT(*) AS COUNT
+FROM (
+    SELECT RS_ID
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+    WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('WT')
+        AND RR_TYPE='REC'
+    )
+)
+		<include refid="searchFrag" />
+</select>
+
+<!-- 처리중 조회 -청소- -->
+<select id="CselectTotalPg" resultType="long"
+		parameterType="PaginationInfo">
+	SELECT COUNT(*) AS COUNT
+FROM (
+    SELECT RS_ID
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+    WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('PG')
+        AND RR_TYPE='REC'
+    )
+)
+		<include refid="searchFrag" />
+</select>
+<!-- 처리완료 조회 -청소 -->
+<select id="CselectTotalPc" resultType="long"
+		parameterType="PaginationInfo">
+	SELECT COUNT(*) AS COUNT
+FROM (
+    SELECT RS_ID
+    FROM RNC_SCHEDULE 
+    INNER JOIN ZONE ON RS_ZONE = ZONE_CD 
+    INNER JOIN RNC_REQ ON RS_ID = RR_RS_ID 
+    LEFT JOIN EMPLOYEE ON RS_EMP_NO = EMP_NO 
+    LEFT JOIN COMMON_CODE ON RS_TYPE = CODE_ID
+    WHERE RNC_SCHEDULE.RS_ID IN (
+        SELECT RR_RS_ID FROM RNC_REQ WHERE RR_STTS IN ('PC')
+        AND RR_TYPE='REC'
+    )
+)
+		<include refid="searchFrag" />
+</select>
+</mapper>

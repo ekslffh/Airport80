@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.Infra.stockOrder.dao.StockOrderDAO">
+
+<insert id="insertStockOrder" parameterType="stockOrderVO">
+    <selectKey order="BEFORE" resultType="string" keyProperty="soId">
+        SELECT 
+            TO_CHAR(SYSDATE, 'YYYYMMDD') || LPAD(SO_SEQ.NEXTVAL, 3, '0') AS SO_ID
+        FROM DUAL
+    </selectKey>
+    INSERT INTO STOCK_ORDER (
+        SO_ID,
+        SO_STATUS,
+        SO_TS,
+        SO_MEMO,
+        SO_AMOUNT,
+        SO_EMP_NO,
+        VP_ID,
+        SPR_ID
+    ) VALUES (
+        #{soId,jdbcType=VARCHAR},
+        #{soStatus,jdbcType=VARCHAR},
+        #{soTs,jdbcType=TIMESTAMP},
+        #{soMemo,jdbcType=VARCHAR},
+        #{soAmount,jdbcType=NUMERIC},
+        #{soEmpNo,jdbcType=CHAR},
+        #{soId,jdbcType=VARCHAR},
+        #{sprId,jdbcType=VARCHAR}
+    )
+   
+</insert>
+
+<insert id="insertStockOrderDetail" parameterType="stockOrderDetailVO">
+    INSERT INTO STOCK_ORDER_DETAIL (
+        SO_ID,
+        ST_ID2,
+        SO_CNT
+    ) VALUES (
+        #{soId,jdbcType=VARCHAR},
+        #{stId2,jdbcType=VARCHAR},
+        #{soCnt,jdbcType=NUMERIC}
+    )
+</insert>
+
+<sql id="searchFrag">
+    <where>
+        <if test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+            <choose>
+                <when test="simpleCondition.searchType eq 'id'">
+                    INSTR(SO_ID, #{simpleCondition.searchWord}) > 0
+                </when>
+                <when test="simpleCondition.searchType eq 'name'">
+                    EXISTS (SELECT 1 FROM SUPPLIER WHERE INSTR(NVL(SPR_NM, ''), #{simpleCondition.searchWord}) > 0 AND NVL(SUPPLIER.SPR_ID, '') = STOCK_ORDER.SPR_ID)
+                </when>
+                <when test="simpleCondition.searchType eq 'date'">
+                   INSTR(SO_TS, #{simpleCondition.searchWord}) > 0
+                </when>
+                <when test="simpleCondition.searchType eq 'status'">
+                    INSTR(SO_STATUS, #{simpleCondition.searchWord}) > 0
+                </when>
+                <otherwise>
+                    INSTR(SO_ID, #{simpleCondition.searchWord}) > 0
+                    OR
+                    EXISTS (SELECT 1 FROM SUPPLIER WHERE INSTR(NVL(SPR_NM, ''), #{simpleCondition.searchWord}) > 0 AND NVL(SUPPLIER.SPR_ID, '') = STOCK_ORDER.SPR_ID)
+                    OR
+                    INSTR(SO_TS, #{simpleCondition.searchWord}) > 0
+                    OR
+                    INSTR(SO_STATUS, #{simpleCondition.searchWord}) > 0
+                </otherwise>
+            </choose>
+        </if>
+    </where>
+</sql>
+
+<select id="selectTotalRecord" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM STOCK_ORDER
+		<include refid="searchFrag" />
+</select>
+
+<select id="selectStockOrderList" resultType="stockOrderVO" parameterType="PaginationInfo">
+SELECT B.*
+	FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+			SELECT
+			    SO_ID,
+			    SO_STATUS,
+			    SO_TS,
+			    SO_AMOUNT,
+			    EMP_NM "employee.empNm",
+			    VP_ID,
+			    SUPPLIER.SPR_NM "supplier.sprNm"
+			FROM
+			    STOCK_ORDER
+			INNER JOIN EMPLOYEE ON (STOCK_ORDER.SO_EMP_NO = EMPLOYEE.EMP_NO)
+			LEFT JOIN SUPPLIER ON (STOCK_ORDER.SPR_ID = SUPPLIER.SPR_ID)
+				
+			<include refid="searchFrag" />
+			ORDER BY SO_ID DESC
+		) A
+	) B
+<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+]]>
+</select>
+
+
+<select id="selectList" resultType="stockOrderVO">
+	SELECT 
+		SO_ID, 
+		SO_STATUS,
+		SO_TS,
+		SO_AMOUNT,
+		EMP_NM "employee.empNm",
+		VP_ID,
+		SUPPLIER.SPR_ID "supplier.sprId", 
+		SPR_NM "supplier.sprNm"
+		FROM 
+		STOCK_ORDER
+			INNER JOIN EMPLOYEE ON (STOCK_ORDER.SO_EMP_NO = EMPLOYEE.EMP_NO)
+			LEFT JOIN SUPPLIER ON (STOCK_ORDER.SPR_ID = SUPPLIER.SPR_ID)
+		WHERE
+		SO_ID = #{soId}
+</select>
+
+
+<update id="modifyStockCnt" parameterType="string">
+UPDATE STOCK S
+SET S.ST_QUANTITY = S.ST_QUANTITY + (
+    SELECT D.SO_CNT 
+    FROM STOCK_ORDER_DETAIL D
+    WHERE S.ST_ID = D.ST_ID2 AND D.SO_ID = #{soId})
+    
+WHERE EXISTS (
+    SELECT 1
+    FROM STOCK_ORDER_DETAIL D
+    WHERE S.ST_ID = D.ST_ID2 AND D.SO_ID = #{soId}
+)
+</update>
+
+<update id="modifyStockStatus" parameterType="String">
+ UPDATE STOCK_ORDER
+ SET SO_STATUS = '입고완료'
+ WHERE SO_ID = #{soId}
+</update>
+
+</mapper>

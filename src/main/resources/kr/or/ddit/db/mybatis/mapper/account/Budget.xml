@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.accounting.budget.dao.BudgetDAO">
+
+	<sql id="searchFrag">
+		<where>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'id'">
+						INSTR(bud_id, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'year'">
+						INSTR(bud_year, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'deptNo'">
+						INSTR(dept_no, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(bud_id, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(bud_year, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(dept_no, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM budget
+		<include refid="searchFrag" />
+	</select>
+
+	<select id="BudgetList" resultType="BudgetVO"
+		parameterType="HashMap">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		bud_id,
+		bud_year,
+		bud_amt,
+		bud_crt_dt,
+		bud_upd_dt,
+		dept_no
+		FROM budget
+		<include refid="searchFrag" />
+		ORDER BY bud_crt_dt DESC
+		) A
+		) B
+        <![CDATA[
+        WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+        ]]>
+	</select>
+	
+	<resultMap type="BudgetVO" id="budgetMap" autoMapping="true">
+		<id property="budId" column="BUD_ID" />
+		<collection property="detailList" ofType="budgetDetailVO" autoMapping="true">
+			<id property="budId" column="BUD_ID" />
+			<id property="acaId" column="ACA_ID" />
+			<association property="category" javaType="AccountCategoryVO" autoMapping="true" />
+		</collection>
+	</resultMap>
+	
+	<select id="getByDeptAndYearAndQuarter" parameterType="BudgetVO" resultMap="budgetMap">
+		SELECT 
+			BUDGET.BUD_ID, BUD_YEAR, BUD_AMT, BUD_CRT_DT, BUD_UPD_DT, DEPT_NO, BUD_QUARTER
+			, BUDGET_DETAIL.ACA_ID, BD_AMT, BD_CRT_TS, BD_UPD_TS
+			, ACA_NM, ACA_INFO
+		FROM BUDGET
+			LEFT OUTER JOIN BUDGET_DETAIL ON (BUDGET.BUD_ID = BUDGET_DETAIL.BUD_ID)
+			INNER JOIN ACCOUNT_CATEGORY ON (BUDGET_DETAIL.ACA_ID = ACCOUNT_CATEGORY.ACA_ID)
+		WHERE DEPT_NO = #{deptNo} AND BUD_YEAR = #{budYear} AND BUD_QUARTER = #{budQuarter}
+	</select>
+
+	<select id="getBudget" parameterType="String"
+		resultType="BudgetVO">
+		SELECT bud_id,
+		bud_year,
+		bud_amt,
+		bud_crt_dt,
+		bud_upd_dt,
+		dept_no,
+		dept_quarter
+		FROM budget WHERE bud_id = #{budId}
+	</select>
+
+	<insert id="insertBudget" parameterType="BudgetVO">
+		INSERT ALL
+			INTO BUDGET (
+				BUD_ID, BUD_YEAR, BUD_AMT
+				, BUD_CRT_DT, BUD_UPD_DT, DEPT_NO
+				, BUD_QUARTER
+			)
+			VALUES (
+				#{budId}, #{budYear}, #{budAmt}
+				, SYSDATE, SYSDATE, #{deptNo}
+				, #{budQuarter}
+			)
+			<foreach collection="detailList" item="detail">
+				INTO BUDGET_DETAIL (
+				    BUD_ID, ACA_ID, BD_AMT
+				    , BD_CRT_TS, BD_UPD_TS
+				) VALUES (
+				    #{budId}, #{detail.acaId}, #{detail.bdAmt}
+				    , SYSDATE, SYSDATE
+				)
+			</foreach>
+		SELECT * FROM DUAL
+	</insert>
+
+	<update id="updateBudget" parameterType="BudgetVO">
+		UPDATE budget
+		SET
+		bud_amt = #{budAmt},
+		bud_upd_dt = sysdate
+		WHERE bud_id = #{budId}
+	</update>
+
+	<delete id="deleteBudget" parameterType="String">
+		DELETE FROM budget WHERE bud_id = #{budId}
+	</delete>
+	
+	<delete id="deleteByYearAndDeptNo" parameterType="BudgetVO">
+		DELETE FROM BUDGET
+		WHERE BUD_YEAR = #{budYear } AND DEPT_NO = #{deptNo }
+	</delete>
+
+</mapper>

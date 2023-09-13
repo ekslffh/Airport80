@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.contract.dao.ContractDAO">
+
+	<sql id="searchFrag">
+		<where>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'code'">
+						INSTR(CTR_ID, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'status'">
+						INSTR(CTR_STATUS, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'empNm'">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(CTR_ID, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(CTR_STATUS, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.vo.PaginationInfo">
+		SELECT COUNT(*)
+		FROM CONTRACT
+		<include refid="searchFrag" />
+	</select>
+
+	<resultMap type="contractVO" id="listMap" autoMapping="true">
+		<id property="ctrId" column="CTR_ID" />
+		<association property="employee" javaType="EmployeeVO" autoMapping="true" />
+		<collection property="contractHistoryList" ofType="contractHistoryVO" autoMapping="true">
+			<id property="chId" column="CH_ID" />
+			<result property="ctrId" column="CH_CTR_ID" />
+		</collection>
+	</resultMap>
+	
+	<resultMap type="contractVO" id="detailMap" autoMapping="true">
+		<id property="ctrId" column="CTR_ID" />
+		<association property="employee" javaType="EmployeeVO" autoMapping="true" />
+		<collection property="contractHistoryList" ofType="contractHistoryVO" autoMapping="true">
+			<id property="chId" column="CH_ID" />
+			<result property="ctrId" column="CH_CTR_ID" />
+		</collection>
+	</resultMap>
+
+	<select id="selectList">
+		SELECT 
+		    A.*
+		    , CH_ID, CH_AMT, CH_DOC, CH_START_DT, CH_END_DT, CH_CRT_TS, CONTRACT_HISTORY.CTR_ID "CH_CTR_ID"
+		    , EMP_NM
+		FROM 
+		    (
+		        SELECT 
+		            ROWNUM RNUM, CTR_ID, CTR_STATUS, CTR_MEMO, EMP_NO 
+		        FROM CONTRACT
+		    ) A 
+		LEFT OUTER JOIN CONTRACT_HISTORY ON (A.CTR_ID = CONTRACT_HISTORY.CTR_ID)
+		INNER JOIN EMPLOYEE ON (A.EMP_NO = EMPLOYEE.EMP_NO)
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectOne">
+		SELECT 
+		    CONTRACT.CTR_ID, CTR_STATUS, CTR_MEMO, EMP_NO
+		    , CH_ID, CH_AMT, CH_DOC, CH_START_DT, CH_END_DT, CH_CRT_TS, CONTRACT_HISTORY.CTR_ID "CH_CTR_ID"
+		    , EMP_NO, EMP_NM, EMP_BIR, EMP_GENDER, EMP_EMAIL
+		    , EMP_ADDR, EMP_CONTACT, EMP_STATUS, EMP_JOIN_DT
+		    , EMP_RESIGN_DT, EMP_CRT_DT, EMP_UPD_DT, EMP_DEPT_NO
+		    , EMP_ROLE_NM, EMP_CTR_FILE, EMP_TEAM
+		    , EMP_ACCNUM, EMP_EMAILPASS
+		FROM CONTRACT
+		LEFT OUTER JOIN CONTRACT_HISTORY ON (CONTRACT.CTR_ID = CONTRACT_HISTORY.CTR_ID)
+		INNER JOIN EMPLOYEE USING (EMP_NO)
+		WHERE CONTRACT.CTR_ID = #{ctrId}
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO CONTRACT (
+			CTR_ID, CTR_STATUS, CTR_MEMO, EMP_NO
+		) VALUES (
+		  #{ctrId,jdbcType=VARCHAR}
+		, 'V01'
+		, #{ctrMemo,jdbcType=VARCHAR}
+		, #{empNo,jdbcType=CHAR}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE CONTRACT
+		SET
+		    CTR_STATUS = #{ctrStatus, jdbcType=VARCHAR}
+		    , CTR_MEMO = #{ctrMemo, jdbcType=VARCHAR}
+		    , EMP_NO = #{empNo, jdbcType=CHAR}
+		WHERE
+		    CTR_ID = #{ctrId, jdbcType=VARCHAR}
+	</update>
+</mapper>

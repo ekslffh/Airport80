@@ -1,0 +1,178 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://www.springframework.org/tags/form" prefix="form" %>  
+
+<div class="pagetitle">
+	<h1>반입불가 물품관리</h1>
+</div>
+<section class="section">
+	<div class="row">
+		<div class="col-lg-12">
+			<div class="card">
+				<div class="card-body">
+					<h5 class="card-title"></h5>
+					<p></p>
+
+<table class="table table-bordered">
+<thead class="table-light">
+	<th class="text-center">ID</th>
+	<th class="text-center">구분</th>
+	<th class="text-center">내용</th>
+	<th class="wdth text-center">기내반입</th>
+	<th class="wdth text-center">수화물반입</th>
+</thead>
+<tbody>
+	<c:set var="confisList" value="${paging.dataList }" />
+	<c:choose>
+		<c:when test="${empty confisList }">
+			<tr>
+				<td colspan="5">조건에 맞는 게시글 없음.</td>
+			</tr>
+		</c:when>
+		<c:otherwise>
+			<c:forEach items="${confisList }" var="confis">
+				<tr>
+				<c:url value="/safety/confisInfoView.do" var="viewURL">
+					<c:param name="what" value="${confis.ciNo }" />
+				</c:url>
+					<td class="text-center">${confis.ciNo }</td>
+					<td>${confis.ciGubun }</td>
+					<td class="content"><a href="${viewURL }" style="display:block;">${confis.ciCarryBan }</a></td>
+					<c:if test="${confis.ciCabin eq 'Y'}">
+						<td class="text-center"><i class="bi bi-circle"></i></td>
+					</c:if>
+					
+					<c:if test="${confis.ciCabin eq 'N'}">
+						<td class="text-center"><i class="bi bi-x-lg"></i> </td>
+					</c:if>
+					
+					<c:if test="${confis.ciTrust eq 'Y'}">
+						<td class="text-center"><i class="bi bi-circle"></i></td>
+					</c:if>
+					<c:if test="${confis.ciTrust eq 'N'}">
+						<td class="text-center"><i class="bi bi-x-lg"></i> </td>
+					</c:if>				
+					
+				</tr>
+			</c:forEach>
+		</c:otherwise>
+	</c:choose>
+</tbody>
+
+<tfoot>
+		<tr>
+			<td colspan="5">
+				<div class="d-flex justify-content-center mb-3">
+				${paging.pagingHTML }
+				</div>
+				<div id="searchUI" class="row justify-content-center">
+					<div  class="col-auto">
+						<form:select path="simpleCondition.searchType" class="form-select">
+							<form:option value="" label="전체" />
+							<form:option value="writer" label="구분" />
+							<form:option value="title" label="내용" />
+							<form:option value="content" label="ID" />
+						</form:select>
+					</div>
+					<div  class="col-auto">
+						<form:input path="simpleCondition.searchWord" class="form-control"/>
+					</div>
+					<div  class="col-auto">
+						<input type="button" value="검색" id="searchBtn" class="btn btn-success"/>
+						<a href="<c:url value='/safety/confisInfoInsert.do'/>" class="btn btn-primary">등록</a>
+						<a class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalDialogScrollable">액체류 정의</a>
+					</div>
+				</div>
+			</td>
+		</tr>
+	</tfoot>
+
+</table>
+
+<form:form id="searchForm" modelAttribute="simpleCondition" method="get">
+	<form:hidden path="searchType" />
+	<form:hidden path="searchWord" />
+	<input type="hidden" name="page" />
+</form:form>
+
+
+
+
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+
+
+<!-- Modal Dialog Scrollable -->
+<div class="modal fade" id="modalDialogScrollable" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable" >
+    <div class="modal-content" style="width: 130%; margin-left: -15%;">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-droplet"></i>액체류 정의</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+     <!-- 액체류 조회 출력 --> 
+		<table class="table table-bordered">
+		<thead class="table-light">
+			<th class="text-center">액체종류</th>
+			<th class="text-center">액체예시</th>
+		</thead>
+		<tbody>
+			<c:if test="${empty liquidList }">
+				<tr>
+					<td colspan="4"> 액체종류 없음.</td>
+				</tr>
+			</c:if>
+			<c:if test="${not empty liquidList }">
+				<c:forEach items="${liquidList}" var="lqd">
+					<tr>
+						<td>${lqd.liquid}</td>
+						<td>${lqd.liquidKind}</td>
+					</tr>
+				</c:forEach>
+			</c:if>
+		</tbody>
+		</table>
+      
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div><!-- End Modal Dialog Scrollable-->
+              
+              
+              
+<script>
+	function fn_paging(page){
+		searchForm.page.value = page;
+		searchForm.requestSubmit();
+	}
+	
+	$(searchBtn).on("click", function(event){
+		$(searchUI).find(":input[name]").each(function(idx, input){
+			let name = input.name;
+			let value = $(input).val();
+			$(searchForm).find(`[name=\${name}]`).val(value);
+		});
+		$(searchForm).submit();
+	});
+	$(document).ready(function(){
+	$(".content").each(function() {
+        var content = $(this).text();
+        if (content.length > 30) {
+           var truncatedContent = content.substring(0, 25) + "...";
+           $(this).text(truncatedContent);
+        }
+     });
+	});
+</script>
+
+
+
+

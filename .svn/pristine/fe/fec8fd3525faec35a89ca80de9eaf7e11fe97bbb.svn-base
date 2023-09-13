@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.common.chat.dao.ChatRoomMemberDAO">
+	<insert id="insertChatRoomMember" parameterType="java.util.List">
+		INSERT ALL
+		<foreach collection="list" item="data">
+			INTO CHAT_ROOM_MEMBER (
+				CHR_ID
+			    , EMP_NO
+			) VALUES (
+				#{data.chrId,jdbcType=VARCHAR}
+				, #{data.empNo,jdbcType=CHAR}
+			)
+		</foreach>
+	  	SELECT * FROM DUAL
+	</insert>
+	
+	<delete id="deleteChatRoomMember">
+		DELETE FROM CHAT_ROOM_MEMBER
+		WHERE CHR_ID = #{chrId} AND EMP_NO = #{empNo}
+	</delete>
+</mapper>

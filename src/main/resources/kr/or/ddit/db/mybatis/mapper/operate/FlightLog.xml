@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.flightLog.dao.FlightLogDAO">
+
+	<select id="selectTotalRecord">
+		SELECT COUNT(*)
+		FROM FLIGHT_LOG
+	</select>
+	
+	<resultMap type="flightLogVO" id="flListMap" autoMapping="true">
+		<id property="flId" column="FL_ID" />
+		<result property="atchFileId" column="FL_ATCH_FILE" />
+		<association property="employee" javaType="EmployeeVO" autoMapping="true" />
+	</resultMap>
+	
+	<select id="selectList" parameterType="PaginationInfo" resultMap="flListMap">
+		SELECT B.* 
+		FROM (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+		        SELECT 
+		            FL_ID, FL_TITLE, FL_CONTENT, FL_CRT_TS, FL_UPD_TS, FL_WRITER, 
+		            EMP_NM
+		        FROM FLIGHT_LOG INNER JOIN EMPLOYEE ON FL_WRITER = EMP_NO
+		        ORDER BY FL_CRT_TS DESC
+		    ) A 
+		) B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<resultMap type="flightLogVO" id="flDetailMap" autoMapping="true">
+		<id property="flId" column="FL_ID" />
+		<association property="employee" javaType="EmployeeVO" autoMapping="true" />
+		<association property="fileGroup" javaType="AtchFileVO">
+			<id property="atchFileId" column="ATCH_FILE_ID" />
+			<result property="creatDt" column="CREAT_DT" />
+			<result property="useAt" column="USE_AT" />
+			<collection property="detailList" ofType="AtchFileDetailVO" autoMapping="true">
+				<id property="atchFileId" column="ATCH_FILE_ID" />
+				<id property="fiSn" column="FI_SN" />
+			</collection>
+		</association>
+	</resultMap>
+	
+	<select id="selectOne" resultMap="flDetailMap">
+		WITH ATCH_FILE_VIEW AS(
+		    SELECT *
+		    FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL 
+		            USING (ATCH_FILE_ID)
+		) 
+		SELECT 
+		    FL_ID, FL_TITLE, FL_CONTENT, 
+		    FL_CRT_TS, FL_UPD_TS, FL_WRITER, FL_ATCH_FILE,
+		    ATCH_FILE_ID, FI_SN, FI_COURS,
+		    FI_EXTSN, FI_ORIGIN_NM, FI_NM, 
+		    FI_SIZE, FI_MIME,
+		    CREAT_DT, USE_AT, EMP_NM
+		FROM FLIGHT_LOG 
+			LEFT OUTER JOIN ATCH_FILE_VIEW ON (FL_ATCH_FILE = ATCH_FILE_ID)
+		    INNER JOIN EMPLOYEE ON (FL_WRITER = EMP_NO)
+		WHERE FL_ID = #{flId}
+	</select>
+	
+	<insert id="insertLog" parameterType="flightLogVO">
+		INSERT INTO FLIGHT_LOG (
+		    FL_ID, 
+		    FL_TITLE, 
+		    FL_CONTENT, 
+		    FL_WRITER,
+		    FL_ATCH_FILE
+		) VALUES (
+		    #{flId},
+		    #{flTitle},
+		    #{flContent},
+		    #{flWriter},
+		    #{atchFileId}
+		)
+	</insert>
+	
+	<update id="updateLog" parameterType="flightLogVO">
+		UPDATE FLIGHT_LOG
+		SET
+		    FL_ID = #{flId, jdbcType=VARCHAR}
+			, FL_TITLE = #{flTitle, jdbcType=VARCHAR}
+			, FL_CONTENT = #{flContent, jdbcType=VARCHAR}
+			, FL_UPD_TS = SYSTIMESTAMP
+			, FL_WRITER = #{flWriter, jdbcType=CHAR}
+			, FL_ATCH_FILE = #{atchFileId, jdbcType=VARCHAR}
+		WHERE FL_ID = #{flId}
+	</update>
+	
+	<delete id="deleteLog">
+		DELETE FROM FLIGHT_LOG
+		WHERE FL_ID = #{flId}
+	</delete>
+	
+</mapper>

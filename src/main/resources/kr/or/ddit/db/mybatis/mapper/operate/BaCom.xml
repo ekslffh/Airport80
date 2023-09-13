@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.bidApplication.dao.BaCommonDAO">
+
+
+<select id="selectBaStuList" resultType="CommonCodeVO">
+	SELECT CODE_ID, CODE_NM
+	FROM COMMON_CODE
+	WHERE CODE_INFO LIKE '계약상태'
+</select>
+
+
+
+</mapper>

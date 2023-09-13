@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.safety.securityLog.dao.SecurityLogDAO">
+
+<sql id="filterFrag">
+        <if test="codeId != null and codeId != ''">
+            AND CODE_ID = #{codeId}
+        </if>
+</sql>   
+   
+<resultMap type="SecurityLogVO" id="securityLogMap" autoMapping="true">
+   <id property="slogId" column="SLOG_ID"/>
+   <result property="slogTitle" column="SLOG_TITLE"/>
+   <result property="slogTitle" column="SLOG_TITLE"/>
+   <result property="slogPrcDt" column="SLOG_PRC_DT"/>
+   <result property="slogWriter" column="EMP_NM"/>
+   <result property="slogCa" column="CODE_NM"/>
+   
+   <association property="zone" javaType="ZoneVO">
+      <result property="zoneFloor" column="ZONE_FLOOR"/>
+      <result property="zoneCtgr" column="ZONE_CTGR"/>
+   </association>
+</resultMap>
+
+<select id="selectSecLogList" resultMap="securityLogMap" parameterType="String">
+        SELECT
+      SLOG_ID, SLOG_TITLE, ZONE_FLOOR, ZONE_CTGR, SLOG_PRC_DT, EMP_NM, CODE_NM
+      FROM SECURITY_LOG 
+      left outer join zone
+      on SLOG_FC = ZONE_CD
+      left outer join EMPLOYEE
+      on SLOG_WRITER = EMP_NO
+      left outer join COMMON_CODE
+      on SLOG_CA = CODE_ID
+      WHERE SLOG_DEL = 'N'
+      <include refid="filterFrag" />
+      order by cast (substr(slog_id,4) as number) desc
+</select>
+
+
+
+
+<select id="selectSearchSecLog" resultMap="securityLogMap" parameterType="SimpleCondition">
+        SELECT
+    SLOG_ID, SLOG_TITLE, ZONE_FLOOR, ZONE_CTGR, SLOG_PRC_DT, EMP_NM, CODE_NM, CODE_ID
+    FROM SECURITY_LOG 
+    LEFT OUTER JOIN zone ON SLOG_FC = ZONE_CD
+    LEFT OUTER JOIN EMPLOYEE ON SLOG_WRITER = EMP_NO
+    LEFT OUTER JOIN COMMON_CODE ON SLOG_CA = CODE_ID
+    
+    WHERE
+    <!-- 검색어 조건 추가 -->
+    <if test="searchWord != null and searchWord != ''">
+        (
+            INSTR(SLOG_TITLE, #{searchWord}) > 0 OR
+            INSTR(ZONE_CTGR, #{searchWord}) > 0 OR
+            INSTR(CODE_NM, #{searchWord}) > 0 OR
+            INSTR(EMP_NM, #{searchWord}) > 0 OR
+            INSTR(SLOG_ID, #{searchWord}) > 0 OR
+            INSTR(ZONE_FLOOR, #{searchWord}) > 0 OR
+            INSTR(SLOG_PRC_DT, #{searchWord}) > 0
+        )
+    </if>
+    
+    <!-- 상태(검색 유형) 조건 추가 -->
+    <if test="searchType != null and searchType != ''">
+        AND CODE_ID = #{searchType}
+    </if>
+    
+    ORDER BY CAST(SUBSTR(slog_id, 4) AS NUMBER) DESC
+</select>
+ 
+
+<insert id="insertSecLog" parameterType="SecurityLogVO">
+<selectKey order="BEFORE" resultType="string" keyProperty="slogId">
+      SELECT 'SEC' || TO_CHAR(SLOG_ID_SEQ.NEXTVAL, 'FM00009') FROM DUAL
+</selectKey>
+INSERT INTO security_log (
+    slog_id,
+    slog_title,
+    slog_content,
+    slog_fc,
+    slog_crt_ts,
+    slog_writer,
+    slog_confis,
+    slog_ca,
+    slog_issue,
+    slog_prc_dt,
+    slog_inh,
+    slog_sr_id
+) VALUES (
+  #{slogId,jdbcType=NUMERIC} 
+, #{slogTitle,jdbcType=VARCHAR}
+, #{slogContent,jdbcType=VARCHAR}
+, #{slogFc,jdbcType=VARCHAR}
+, SYSTIMESTAMP
+, #{slogWriter,jdbcType=CHAR}
+, #{slogConfis,jdbcType=CHAR}
+, #{slogCa,jdbcType=VARCHAR}
+, #{slogIssue,jdbcType=VARCHAR}
+, #{slogPrcDt,jdbcType=TIMESTAMP} 
+, #{slogInh,jdbcType=VARCHAR}
+, #{slogSrId,jdbcType=VARCHAR}
+)
+</insert>
+
+
+
+<resultMap type="SecurityLogVO" id="SecurityViewMap" autoMapping="true">
+   <id property="slogId" column="SLOG_ID"/>
+   <result property="slogTitle" column="SLOG_TITLE"/>
+   <result property="slogPrcDt" column="SLOG_PRC_DT"/>
+   <result property="slogWriter" column="EMP_NM"/>
+   <result property="slogCa" column="CODE_NM"/>
+   <result property="slogContent" column="SLOG_CONTENT"/>
+   <result property="slogCrtTs" column="SLOG_CRT_TS"/>
+   <result property="slogConfis" column="SLOG_CONFIS"/>
+   <result property="slogIssue" column="SLOG_ISSUE"/>
+   <result property="slogPrcDt" column="SLOG_PRC_DT"/>
+   <result property="slogInh" column="SLOG_INH"/>
+   <result property="slogSrId" column="SLOG_SR_ID"/>
+   
+   <association property="zone" javaType="ZoneVO">
+      <result property="zoneFloor" column="ZONE_FLOOR"/>
+      <result property="zoneCtgr" column="ZONE_CTGR"/>
+   </association>
+</resultMap>
+<select id="selectSecLog" resultMap="SecurityViewMap">
+ SELECT
+      SLOG_ID, SLOG_TITLE, ZONE_FLOOR, ZONE_CTGR, SLOG_PRC_DT, EMP_NM, CODE_NM ,
+      SLOG_CONTENT, SLOG_CRT_TS, SLOG_CONFIS, SLOG_ISSUE, SLOG_PRC_DT, SLOG_INH, SLOG_SR_ID
+      
+      FROM SECURITY_LOG 
+      left outer join zone
+      on SLOG_FC = ZONE_CD
+      left outer join EMPLOYEE
+      on SLOG_WRITER = EMP_NO
+      left outer join COMMON_CODE
+      on SLOG_CA = CODE_ID
+        where slog_id = #{slogId}
+</select>
+
+<update id="deleteSecLog" parameterType="String">
+UPDATE security_log
+SET
+    SLOG_DEL = 'Y'
+WHERE
+        slog_id = #{slogId}
+</update>
+
+
+<select id="selectCountTotal" resultType="long">
+SELECT COUNT(*) FROM security_log
+</select>
+
+<select id="selectCountReq" resultType="long">
+SELECT COUNT(*) FROM security_log where SLOG_CA = 'REQ'
+</select>
+
+<select id="selectCountNonReq" resultType="long">
+SELECT COUNT(*) FROM security_log where SLOG_CA = 'COMM'
+</select>
+
+</mapper>

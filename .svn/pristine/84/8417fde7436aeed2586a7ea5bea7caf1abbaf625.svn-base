@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.lostItem.dao.LostItemDAO">
+		<sql id="searchFrag">
+		<where>
+        	<if test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+	        	<choose>
+	        		<when test="simpleCondition.searchType eq 'category'">
+	        			INSTR(LI_CTGR, #{simpleCondition.searchWord}) > 0
+	        		</when>
+	        		<when test="simpleCondition.searchType eq 'status'">
+	        			INSTR(LI_STATUS, #{simpleCondition.searchWord}) > 0
+	        		</when>
+	        		<otherwise>
+		        		INSTR(LI_CTGR, #{simpleCondition.searchWord}) > 0
+		        		OR
+		        		INSTR(LI_STATUS, #{simpleCondition.searchWord}) > 0
+	        		</otherwise>
+	        	</choose>
+        	</if>
+        </where>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM LOST_ITEM
+		<include refid="searchFrag" />
+	</select>
+
+	<select id="selectLiList" resultType="LostItemVO" parameterType="PaginationInfo">
+	SELECT B.*
+		FROM (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+		       SELECT
+					LI_ID, LI_NM, LI_CTGR,
+					LI_PS_NM, LI_CRT_TS,
+					LI_STATUS
+				FROM LOST_ITEM
+		        <include refid="searchFrag" />
+		        ORDER BY LI_ID DESC
+		    ) A
+		) B
+		<![CDATA[   
+      WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+      ]]>
+		
+	</select>
+	
+	
+	
+	<resultMap type="LostItemVO" id="liMap" autoMapping="true">
+		<id property="liId" column="LI_ID"/>
+		<association property="fileGroup" javaType="AtchFileVO">
+			<id property="atchFileId" column="ATCH_FILE_ID"/>
+			<result property="creatDt" column="CREAT_DT"/>
+			<result property="useAt" column="USE_AT"/>
+			<collection property="detailList" ofType="AtchFileDetailVO" autoMapping="true">
+				<id property="atchFileId" column="ATCH_FILE_ID"/>
+				<id property="fiSn" column="FI_SN"/>
+			</collection>
+		</association>
+	</resultMap>
+		
+
+
+
+	<select id="selectLi" resultType="LostItemVO" resultMap="liMap">
+		WITH ATCH_FILE_VIEW AS ( 
+		    SELECT * FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL USING (ATCH_FILE_ID) 
+		) 
+		SELECT
+		LI_ID,
+		LI_IMG, LI_NM,
+		LI_CTGR,
+		LI_LOC, LI_FND_TS, LI_STATUS,
+		LI_RET_TS,
+		LI_PS_NM, LI_CRT_TS,
+		LI_UPD_TS, LI_ATCH_FILE
+		, ATCH_FILE_ID, CREAT_DT, USE_AT
+	    , ATCH_FILE_ID, FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE, FI_MIME
+		FROM LOST_ITEM
+			LEFT OUTER JOIN ATCH_FILE_VIEW ON (ATCH_FILE_ID = LI_ATCH_FILE)
+		WHERE LI_ID = #{liId}
+
+	</select>
+
+	<insert id="insertLi" parameterType="LostItemVO">
+		<selectKey order="BEFORE" keyProperty="liId"
+			resultType="string">
+			SELECT 'L' || TO_CHAR(LOST_ITEM_SEQ.NEXTVAL, 'FM0009')
+			FROM DUAL
+		</selectKey>
+		INSERT INTO LOST_ITEM(
+			LI_ID, LI_IMG,
+			LI_NM, LI_CTGR,
+			LI_LOC,
+			LI_FND_TS,LI_STATUS,
+			LI_RET_TS, LI_PS_NM,
+			LI_ATCH_FILE
+		)
+		VALUES(
+			#{liId,jdbcType=NUMERIC}
+			,#{liImg,jdbcType=VARCHAR}
+			,#{liNm,jdbcType=VARCHAR}
+			, #{liCtgr,jdbcType=VARCHAR}
+			,#{liLoc,jdbcType=VARCHAR}
+			, #{liFndTs,jdbcType=DATE}
+			, #{liStatus,jdbcType=CHAR}
+			, #{liRetTs,jdbcType=TIMESTAMP}
+			, #{liPsNm,jdbcType=VARCHAR}
+			, #{atchFileId,jdbcType=CHAR}
+		)
+	</insert>
+	
+	<update id="updateLi" parameterType="LostItemVO">
+		UPDATE LOST_ITEM
+		SET
+		LI_IMG=#{liImg,jdbcType=VARCHAR}
+		, LI_NM= #{liNm ,jdbcType=VARCHAR}
+		, LI_CTGR= #{liCtgr ,jdbcType=VARCHAR}
+		, LI_LOC= #{liLoc ,jdbcType=VARCHAR}
+		, LI_FND_TS= #{liFndTs,jdbcType=DATE}
+		, LI_STATUS= #{liStatus ,jdbcType=CHAR}
+		, LI_PS_NM= #{liPsNm ,jdbcType=VARCHAR}
+		, LI_ATCH_FILE =#{atchFileId,jdbcType=CHAR}
+		WHERE LI_ID = #{liId}
+	</update>
+	
+	<update id="updateLiStatus" parameterType="LostItemVO">
+		UPDATE LOST_ITEM
+		SET
+			LI_STATUS = #{liStatus ,jdbcType=CHAR}
+		WHERE
+		LI_ID = #{liId}
+	</update>
+	
+
+
+
+</mapper>

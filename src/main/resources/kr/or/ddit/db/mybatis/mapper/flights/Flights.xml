@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.publicdata.flight.dao.FSOthersDAO">
+
+	<select id="selectAirlineList" resultType="AirlineVO">
+		SELECT
+			AL_CD
+			, AL_KNM
+			, AL_ENM
+			, AL_COUNTRY
+			, AL_COUN_CD
+			, AL_FLAG
+			, AL_SCALE
+			, AL_DESC
+			, AL_STATUS
+		FROM
+			AIRLINE
+	</select>
+
+
+	<select id="selectAirline" resultType="string"	parameterType="AirlineVO">
+		SELECT
+			AL_CD
+			, AL_KNM
+			, AL_ENM
+			, AL_COUNTRY
+			, AL_COUN_CD
+			, AL_FLAG
+			, AL_SCALE
+			, AL_DESC
+			, AL_STATUS
+		FROM
+			AIRLINE
+		WHERE AP_CD = #{alCd}
+	</select>
+
+
+	<select id="selectAirportList" resultType="AirPortsVO">
+		SELECT
+			AP_CD
+			, AP_LOC
+			, AP_NM
+		FROM
+			AIRPORTS
+	</select>
+
+
+	<select id="selectAirport" resultType="AirPortsVO" parameterType="string">
+		SELECT
+			AP_CD
+			, AP_LOC
+			, AP_NM
+		FROM
+			AIRPORTS
+		WHERE AP_CD = #{apCd}
+	</select>
+
+
+</mapper>

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.hr.eplStatus.dao.EplstatusDAO">
+	<sql id="searchFrag">
+      <where>
+           <if test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+              <choose>
+                 <when test="simpleCondition.searchType eq 'writer'">
+                    INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+                 </when>
+                 <when test="simpleCondition.searchType eq 'eplCd'">
+                    INSTR(EPL_CD, #{simpleCondition.searchWord}) > 0
+                 </when>
+                 <when test="simpleCondition.searchType eq 'esStatus'">
+                    INSTR(ES_STATUS, #{simpleCondition.searchWord}) > 0
+                 </when>
+                 <otherwise>
+                    INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+                    OR
+                    INSTR(EPL_CD, #{simpleCondition.searchWord}) > 0
+                    OR
+                    INSTR(ES_STATUS, #{simpleCondition.searchWord}) > 0
+                 </otherwise>
+              </choose>
+           </if>
+        </where>
+   </sql>
+	
+	<insert id="insertEplstatus" parameterType="kr.or.ddit.hr.vo.EplstatusVO">
+		<selectKey keyProperty="eplId" order="BEFORE" resultType="java.lang.String">
+			select #{eplCd,jdbcType=VARCHAR} || #{empNo,jdbcType=CHAR} from dual
+		</selectKey>
+		INSERT INTO epl_status (
+		    epl_id,
+		    es_car_no,
+		    es_car_model,
+		    es_crt_dt,
+		    emp_no,
+		    epl_cd
+		) VALUES (
+		      #{eplId}
+			, #{esCarNo,jdbcType=VARCHAR}
+			, #{esCarModel,jdbcType=VARCHAR}
+			, SYSDATE
+			, #{empNo,jdbcType=CHAR}
+			, #{eplCd,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	   <select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.vo.PaginationInfo">
+		      SELECT COUNT(*)
+		      FROM EPL_STATUS
+		      <include refid="searchFrag" />
+	   </select>
+   
+   
+<!--    <resultMap type="eplstatusVO" id="eplListMap" autoMapping="true"> -->
+<!--    		<id property="eplId" column="EPL_ID" /> -->
+<!--    		<association property="eplstatus" javaType="eplstatusVO" autoMapping="true" /> -->
+<!--    </resultMap> -->
+   
+   
+	<select id="selectEplList"  parameterType="kr.or.ddit.vo.PaginationInfo">
+		SELECT B.*, E.EMP_NM
+		FROM (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+		        SELECT
+		            EPL_ID, ES_STATUS, EMP_NO, EPL_CD, ES_CRT_DT
+		        FROM EPL_STATUS
+		        <include refid="searchFrag" />
+		        ORDER BY CASE WHEN ES_STATUS = 'appr' THEN 0 ELSE 1 END, ES_CRT_DT DESC
+		    ) A
+		) B
+		JOIN EMPLOYEE E ON B.EMP_NO = E.EMP_NO
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+		
+		
+	</select>
+
+	<select id="selectEplstatus">
+		SELECT
+		 epl_id
+		 , es_car_no
+		 , es_car_model
+		 , es_status
+		 , epl.emp_no
+		 , epl_cd
+		 , emp.emp_nm
+		 , es_crt_dt
+		 , epl_reason
+		 , code_nm "commoncode.codeNm"
+		FROM
+		 epl_status epl
+		 LEFT JOIN employee emp ON ( epl.emp_no = emp.emp_no )
+		 LEFT JOIN common_code cc ON ( epl.es_status = cc.code_id )
+		WHERE EPL_ID = #{eplId}
+	</select>
+	
+	
+<!--  신청 상태 변경 -->
+	<update id="updateEplstatus" parameterType="kr.or.ddit.hr.vo.EplstatusVO">
+	    UPDATE EPL_STATUS
+		   SET
+		      ES_STATUS = #{esStatus, jdbcType=VARCHAR},
+			  EPL_REASON = #{eplReason, jdbcType=VARCHAR}			
+		WHERE EPL_ID = #{eplId,jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateEplAll" parameterType="EplstatusVO">
+		UPDATE EPL_STATUS
+		SET
+		    EPL_ID = #{eplId,jdbcType=VARCHAR}
+			, ES_CAR_NO = #{esCarNo, jdbcType=VARCHAR}
+			, ES_CAR_MODEL = #{esCarModel, jdbcType=VARCHAR}
+			, ES_STATUS = 'APP'
+			, EPL_CD = #{eplCd, jdbcType=VARCHAR} 
+		WHERE
+		     EPL_ID = #{eplId,jdbcType=VARCHAR}
+	</update>
+	
+	<select id="checkEpl" parameterType="string">
+	SELECT
+		epl_id
+		, es_car_no
+		, es_car_model
+		, es_status
+		, epl.emp_no
+		, epl_cd
+		, emp.emp_nm
+		, es_crt_dt
+		, epl_reason
+		, code_nm "commoncode.codeNm"
+	FROM
+		epl_status epl
+		LEFT JOIN employee emp ON ( epl.emp_no = emp.emp_no )
+		LEFT JOIN common_code cc ON ( epl.es_status = cc.code_id )
+	WHERE epl.emp_no = #{empNo,jdbcType=CHAR}
+</select>	
+</mapper>

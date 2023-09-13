@@ -1,0 +1,578 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.Infra.rncReq.dao.rncDAO">
+
+	<insert id="insertRncReq" parameterType="rncReqVO">
+		<selectKey order="BEFORE" resultType="string"
+			keyProperty="rrId">
+			SELECT 'RR' || TO_CHAR(RR_ID_SEQ.NEXTVAL, 'FM00009') FROM DUAL
+		</selectKey>
+		INSERT INTO RNC_REQ (
+		RR_ID,
+		RR_LOC,
+		RR_CONTENT,
+		RR_IMG,
+		RR_OCCUR_TS,
+		RR_TS,
+		RR_RS_ID,
+		RR_ACC,
+		RR_STTS,
+		RR_TYPE
+		) VALUES (
+		#{rrId,jdbcType=VARCHAR}
+		, #{rrLoc,jdbcType=VARCHAR}
+		,
+		#{rrContent,jdbcType=VARCHAR}
+		, #{rrImg,jdbcType=VARCHAR}
+		, #{rrOccurTs,
+		jdbcType=TIMESTAMP}
+		, SYSTIMESTAMP
+		, #{rrRsId,jdbcType=VARCHAR}
+		,
+		#{rrAcc,jdbcType=CHAR}
+		,'UN'
+		,
+		#{rrType,jdbcType=VARCHAR}
+		)
+	</insert>
+
+
+	<select id="selectRReqList" resultType="rncReqVO"
+		parameterType="PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_TYPE = 'REF' 
+		<include refid="searchFrag" />
+		ORDER BY RR_OCCUR_TS DESC
+		) A
+		) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]>
+	</select>
+
+	<select id="selectCReqList" resultType="rncReqVO"
+		parameterType="PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_TYPE = 'REC' 
+		<include refid="searchFrag" />
+		ORDER BY RR_OCCUR_TS DESC
+		) A
+		) B
+	<![CDATA[   
+	WHERE 
+		RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]>
+	</select>
+
+	<sql id="searchFrag">
+			<if
+				test="simpleCondition != null and simpleCondition.searchWord != null and !simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'id'">
+						AND (INSTR(RR_ID, #{simpleCondition.searchWord}) > 0)
+					</when>
+					<when test="simpleCondition.searchType eq 'loc'">
+						AND (EXISTS (
+						SELECT 1
+						FROM ZONE
+						WHERE
+						INSTR(ZONE_FLOOR || '층 ' ||ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+						AND ZONE_CD = RR_LOC
+						))
+					</when>
+					<when test="simpleCondition.searchType eq 'stts'">
+						AND (EXISTS (SELECT 1 FROM COMMON_CODE WHERE INSTR(CODE_NM, #{simpleCondition.searchWord}) > 0 AND COMMON_CODE.CODE_ID=RR_STTS))
+					</when>
+					<when test="simpleCondition.searchType eq 'content'">
+						AND (INSTR(RR_CONTENT, #{simpleCondition.searchWord}) > 0)
+					</when>
+					<otherwise>
+						AND (INSTR(RR_ID, #{simpleCondition.searchWord}) > 0)
+						OR
+						(EXISTS (
+						SELECT 1
+						FROM ZONE
+						WHERE
+						INSTR(ZONE_FLOOR || '층 ' ||ZONE_CTGR, #{simpleCondition.searchWord}) > 0
+						AND ZONE_CD = RR_LOC
+						))
+						OR
+						(EXISTS (SELECT 1 FROM COMMON_CODE WHERE INSTR(CODE_NM, #{simpleCondition.searchWord}) > 0 AND COMMON_CODE.CODE_ID=RR_STTS))
+						OR
+						(INSTR(RR_CONTENT, #{simpleCondition.searchWord}) > 0)
+					</otherwise>
+				</choose>
+			</if>
+			
+			
+<!-- 		    simpleCondition.tab 값에 따라 RR_STTS 조건을 추가 -->
+		    <choose>
+		        <when test="simpleCondition.tab == 0">
+		            AND RR_STTS = 'UN'
+		        </when>
+		        <when test="simpleCondition.tab == 1">
+		            AND RR_STTS = 'CP'
+		        </when>
+		    </choose>
+	</sql>
+	
+	
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM RNC_REQ
+		WHERE 
+		RR_TYPE= 'REF'
+		<include refid="searchFrag" />
+	</select>
+
+	<select id="selectTotalRecordtoREC" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM RNC_REQ
+		WHERE
+		RR_TYPE='REC'
+		<include refid="searchFrag" />
+	</select>
+	
+	
+	
+	<resultMap type="rncReqVO" id="rncReqMap" autoMapping="true">
+	<id property="rrId" column="RR_ID"/>
+	<result property="rrAcc" column="EMP_NM"/>
+	<result property="rrType" column="RR_TYPE"/>
+	<result property="rrTs" column="RR_TS"/>
+	<result property="rrContent" column="RR_CONTENT"/>
+
+	<association property="common" javaType="CommonCodeVO">
+		<result property="codeId" column="RR_TYPE"/>
+		<result property="codeNm" column="CODE_NM"/>
+	</association>	
+	
+	<association property="zone" javaType="ZoneVO" >
+		<result property="zoneFloor" column="ZONE_FLOOR"/>
+		<result property="zoneCtgr" column="ZONE_CTGR"/>
+	</association>
+	
+	<association property="fileGroup" javaType="AtchFileVO" autoMapping="true">
+		<id property="atchFileId" column="ATCH_FILE_ID" />
+		<collection property="detailList" ofType="AtchFileDetailVO" autoMapping="true" />
+	</association>
+	</resultMap>
+	
+	<select id="selectRncReq" resultMap="rncReqMap">
+	  SELECT
+	    RR_ID,
+	    ZONE_FLOOR,
+	    ZONE_CTGR,
+	    RR_CONTENT,
+	    RR_IMG,
+	    RR_OCCUR_TS,
+	    RR_TS,
+	    RR_RS_ID,
+	    EMP_NM,
+	    RR_STTS,
+	    RR_TYPE,
+	    CODE_NM,
+	    RR_LOC
+        , ATCH_FILE_ID, CREAT_DT, USE_AT
+        , FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE, FI_MIME
+	FROM
+	    RNC_REQ
+	INNER JOIN COMMON_CODE
+	ON (RR_TYPE = CODE_ID)
+	LEFT OUTER JOIN ZONE 
+	ON RR_LOC = ZONE_CD
+	LEFT OUTER JOIN EMPLOYEE
+	ON RR_ACC = EMP_NO
+    LEFT OUTER JOIN ATCH_FILE ON (ATCH_FILE_ID = RR_IMG)
+    LEFT OUTER JOIN ATCH_FILE_DETAIL USING (ATCH_FILE_ID)
+	WHERE RR_ID = #{rrId}	
+	</select>
+	
+
+	<update id="updateRncReq" parameterType="string">
+		UPDATE RNC_REQ
+		SET
+		RR_CONTENT = #{rrContent,jdbcType=VARCHAR},
+		RR_STTS = 'CP'
+		WHERE
+		RR_ID = #{rrId}
+	</update>
+	
+	<select id="modalRncReqList" resultType="rncReqVO">
+	SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		ZONE_CD"zone.zoneCd",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_STTS = 'UN' AND RR_TYPE = 'REF'
+	</select>
+	
+		<select id="modalRecReqList" resultType="rncReqVO">
+	SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		ZONE_CD"zone.zoneCd",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_STTS = 'UN' AND RR_TYPE = 'REC'
+	</select>
+	
+	<select id="selectedWtRncReq" resultType="rncReqVO"
+		parameterType="PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_STTS = 'UN' AND RR_TYPE = 'REF'
+		<include refid="searchFrag" />
+		ORDER BY RR_ID DESC
+		) A
+		) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]>
+	</select>
+	
+	<select id="selectedPgRncReq" resultType="rncReqVO"
+		parameterType="PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_STTS = 'PG' AND RR_TYPE = 'REF'
+		<include refid="searchFrag" />
+		ORDER BY RR_ID DESC
+		) A
+		) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]>
+	</select>
+	
+	<select id="selectedDlRncReq" resultType="rncReqVO"
+		parameterType="PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_STTS = 'DL' AND RR_TYPE = 'REF'
+		<include refid="searchFrag" />
+		ORDER BY RR_ID DESC
+		) A
+		) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]>
+	</select>
+	
+	<select id="selectedWoRncReq" resultType="rncReqVO"
+		parameterType="PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_STTS = 'WO' AND RR_TYPE = 'REF'
+		<include refid="searchFrag" />
+		ORDER BY RR_ID DESC
+		) A
+		) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]>
+	</select>
+	
+	<select id="selectedPcRncReq" resultType="rncReqVO"
+		parameterType="PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_STTS = 'PC' AND RR_TYPE = 'REF'
+		<include refid="searchFrag" />
+		ORDER BY RR_ID DESC
+		) A
+		) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]>
+	</select>
+	
+	<select id="selectedCpRncReq" resultType="rncReqVO"
+		parameterType="PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_STTS = 'CP' AND RR_TYPE = 'REF'
+		<include refid="searchFrag" />
+		ORDER BY RR_ID DESC
+		) A
+		) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]>
+	</select>
+	
+		<select id="selectedCwtRncReq" resultType="rncReqVO"
+		parameterType="PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_STTS = 'UN' AND RR_TYPE = 'REC'
+		<include refid="searchFrag" />
+		ORDER BY RR_ID DESC
+		) A
+		) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]>
+	</select>
+	
+	<select id="selectedCcpRncReq" resultType="rncReqVO"
+		parameterType="PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		RR_ID,
+		ZONE_FLOOR "zone.zoneFloor",
+		ZONE_CTGR "zone.zoneCtgr",
+		RR_CONTENT,
+		RR_TS,
+		EMP_NM "employee.empNm",
+		CODE_NM "common.codeNm",
+		RR_STTS,
+		RR_TYPE
+		FROM
+		RNC_REQ
+		INNER JOIN ZONE ON (RR_LOC=ZONE_CD)
+		LEFT JOIN EMPLOYEE ON (RR_ACC = EMP_NO)
+		LEFT JOIN COMMON_CODE ON (RR_STTS = CODE_ID)
+		WHERE
+		RR_STTS = 'CP' AND RR_TYPE = 'REC'
+		<include refid="searchFrag" />
+		ORDER BY RR_ID DESC
+		) A
+		) B
+	<![CDATA[   
+	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	]]>
+	</select>
+	
+	<select id="selectRncUdtForm" resultType="rncReqVO">
+	SELECT
+	   *
+	FROM
+	    RNC_REQ
+	WHERE RR_ID = #{rrId}	
+	</select>
+	
+	<update id="modifySttsWt" parameterType="String">
+		 UPDATE RNC_REQ
+       SET RR_STTS = 'WT'
+       WHERE RR_RS_ID = #{rrId} AND RR_STTS != 'PC'
+	</update>
+	<update id="CmodifySttsWt" parameterType="String">
+		UPDATE RNC_REQ
+       SET RR_STTS = 'WT'
+       WHERE RR_TYPE = 'REC' AND RR_RS_ID = #{rrId} AND RR_STTS != 'PC'
+	</update>
+	<update id="modifySttsPg" parameterType="String">
+		 UPDATE RNC_REQ
+       SET RR_STTS = 'PG'
+       WHERE RR_RS_ID = #{rrId}
+       AND RR_STTS != 'PC'
+	</update>
+	<update id="modifySttsDl" parameterType="String">
+		 UPDATE RNC_REQ
+       SET RR_STTS = 'DL'
+       WHERE RR_RS_ID = #{rrId}
+       AND RR_STTS != 'PC'
+	</update>
+	
+	
+<!-- 	<select ="selectRrId" resultType="rncReqVO" > -->
+<!-- 		SELECT  -->
+<!-- 		RR_ID -->
+<!-- 		FROM RNC_REQ -->
+<!-- 		INNER JOIN RNC_SCHEDULE ON(RR_RS_ID) -->
+		
+<!-- 	</select> -->
+</mapper>

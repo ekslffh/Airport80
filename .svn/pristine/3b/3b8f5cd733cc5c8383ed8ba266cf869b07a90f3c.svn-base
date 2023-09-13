@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.vendor.dao.VendorDAO">
+	<sql id="searchFrag">
+		<where>
+        	<if test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+	        	<choose>
+	        		<when test="simpleCondition.searchType eq 'name'">
+	        			INSTR(VEND_NM, #{simpleCondition.searchWord}) > 0
+	        		</when>
+	        		<when test="simpleCondition.searchType eq 'type'">
+	        			INSTR(VEND_TYPE, #{simpleCondition.searchWord}) > 0
+	        		</when>
+	        		<when test="simpleCondition.searchType eq 'status'">
+	        			INSTR(VEND_STATUS, #{simpleCondition.searchWord}) > 0
+	        		</when>
+	        		<otherwise>
+		        		INSTR(VEND_NM, #{simpleCondition.searchWord}) > 0
+		        		OR
+		        		INSTR(VEND_TYPE, #{simpleCondition.searchWord}) > 0
+		        		OR
+		        		INSTR(VEND_STATUS, #{simpleCondition.searchWord}) > 0
+	        		</otherwise>
+	        	</choose>
+        	</if>
+        </where>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.vo.PaginationInfo">
+		SELECT COUNT(*)
+		FROM VENDOR
+		<include refid="searchFrag" />
+	</select>
+
+<!-- 외부업체 삽입 -->
+	<insert id="insertVendor" parameterType="vendorVO">
+		<selectKey order="BEFORE" keyProperty="vendId" resultType="string">
+		    SELECT CONCAT(#{vendType, jdbcType=VARCHAR}, LPAD(VENDOR_SEQ.NEXTVAL, 4, '0')) 
+		    FROM DUAL
+		</selectKey>
+		INSERT INTO VENDOR(
+			vend_id, 
+			vend_nm, 
+			vend_op_hours, 
+			vend_cl_hours,
+			vend_contact,
+			vend_loc,
+			vend_mvp,
+			vend_desc,
+			vend_type,
+			vend_dt,
+			vr_id,
+			vend_owner,
+			vend_ctr_id,
+			vend_floor
+		)
+		VALUES (
+		    #{vendId,jdbcType=CHAR},
+		    #{vendNm,jdbcType=VARCHAR},
+		    #{vendOpHours,jdbcType=VARCHAR},
+		    #{vendClHours,jdbcType=VARCHAR},
+		    #{vendContact,jdbcType=VARCHAR},
+		    #{vendLoc,jdbcType=VARCHAR},
+		    #{vendMvp,jdbcType=VARCHAR},
+		    #{vendDesc,jdbcType=VARCHAR},
+		    #{vendType,jdbcType=VARCHAR},
+		    SYSDATE,
+		    'T' || #{vendId,jdbcType=CHAR},
+		    #{vendOwner,jdbcType=VARCHAR},
+		    #{vendCtrId,jdbcType=VARCHAR},
+		    #{vendFloor,jdbcType=VARCHAR}
+		    )
+	</insert>
+	
+	<resultMap type="vendorVO" id="listMap" autoMapping="true">
+		<id property="vrId" column="VR_ID" />
+		<association property="contract" javaType="contractVO" autoMapping="true" />
+	</resultMap>
+	
+	<select id="selectVendorList" parameterType="vendorVO" resultMap="listMap">
+		SELECT 
+	        C.*, CONTRACT.CTR_STATUS, TO_CHAR(CONTRACT_HISTORY.CH_END_DT, 'YYYY-MM-DD') AS CH_END_DT, 
+	        CONTRACT.CTR_ID,  ZONE.ZONE_CTGR
+	    FROM
+	    (
+	    SELECT B.*
+	        FROM (
+	            SELECT ROWNUM RNUM, A.*
+	            FROM (
+	                SELECT
+	                    vend_id, vend_nm, vend_contact, vend_type, VEND_CTR_ID, 
+	                    VEND_LOC, vr_id, vend_owner, VEND_FLOOR, vend_op_hours, vend_cl_hours, vend_desc, vend_mvp
+	                FROM VENDOR
+	                ORDER BY vend_id ASC
+	            ) A 
+	        ) B
+	  		<![CDATA[   
+		    WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		    ]]>    ) C
+		    INNER JOIN CONTRACT ON (CONTRACT.CTR_ID = C.VEND_CTR_ID)
+		    LEFT OUTER JOIN CONTRACT_HISTORY ON (CONTRACT.CTR_ID = CONTRACT_HISTORY.CTR_ID)
+		    LEFT OUTER JOIN ZONE ZONE ON (C.VEND_LOC = ZONE.ZONE_CD)
+	</select>
+	
+	<select id="selectVendorCos" resultType="vendorVO"> 
+		SELECT 
+			vend_id, vend_nm, vend_contact, vend_type, 
+	        VEND_LOC, VEND_FLOOR, vend_op_hours, vend_cl_hours, vend_desc, vend_mvp
+	    FROM VENDOR
+	</select>
+
+	<resultMap type="vendorVO" id="detailMap" autoMapping="true">
+		<id property="vrId" column="VR_ID" />
+		<association property="contract" javaType="contractVO" autoMapping="true">
+			<id property="ctrId" column="CTR_ID" />
+			<collection property="contractHistoryList" ofType="contractHistoryVO" autoMapping="true">
+				<id property="chId" column="CH_ID" />
+				<result property="ctrId" column="CH_CTR_ID" />
+				<association property="fileGroup" javaType="AtchFileVO" autoMapping="true">
+					<collection property="detailList" ofType="AtchFileDetailVO" autoMapping="true" />
+				</association>
+			</collection>
+		</association>
+	</resultMap>
+	
+	<select id="selectVendor" parameterType="vendorVO" resultMap="detailMap">
+		WITH ATCH_FILE_VIEW AS
+		(
+		    SELECT *
+		    FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL 
+		            USING (ATCH_FILE_ID)
+		) 
+		SELECT
+		    VEND_ID, VEND_NM, VEND_OP_HOURS
+		    , VEND_CONTACT, ZONE.ZONE_CTGR AS VEND_LOC, VEND_MVP
+		    , VEND_DESC, VEND_TYPE, VEND_DT, ZONE.ZONE_CTGR AS VEND_LOC, VEND_FLOOR
+		    , VEND_STATUS, VEND_IMG, VR_ID, VEND_CTR_ID, VEND_CL_HOURS
+		    , CONTRACT.CTR_ID, CTR_STATUS, CTR_MEMO, EMP_NO, EMP_NM
+		    , CH_ID, CH_AMT, CH_DOC, CH_START_DT, CH_END_DT, CH_CRT_TS, CONTRACT_HISTORY.CTR_ID "CH_CTR_ID"
+		    , ATCH_FILE_ID, CREAT_DT, USE_AT
+		    , FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE, FI_MIME
+		FROM
+		    VENDOR
+		INNER JOIN CONTRACT ON (VEND_CTR_ID = CTR_ID)
+		INNER JOIN EMPLOYEE USING (EMP_NO)
+		LEFT OUTER JOIN CONTRACT_HISTORY ON (CONTRACT.CTR_ID = CONTRACT_HISTORY.CTR_ID)
+		LEFT OUTER JOIN ATCH_FILE_VIEW ON (CH_DOC = ATCH_FILE_ID)
+        LEFT OUTER JOIN ZONE ON (VENDOR.VEND_LOC = ZONE.ZONE_CD)
+		WHERE VEND_ID = #{vendId, jdbcType=CHAR}
+	</select>
+	
+	<update id="updateVendStatus" parameterType="vendorVO">
+		UPDATE contract c
+		SET c.ctr_status = #{ctrStatus, jdbcType=VARCHAR}
+		WHERE c.CTR_ID = #{ctrId, jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateVendor" parameterType="vendorVO">
+		UPDATE VENDOR
+		SET
+			  VR_ID = #{vrId, jdbcType=VARCHAR}
+			, VEND_CTR_ID = #{vendCtrId, jdbcType=VARCHAR}
+			, VEND_CL_HOURS = #{vendClHours, jdbcType=VARCHAR}
+			, VEND_ID = #{vendId, jdbcType=CHAR}
+			, VEND_NM = #{vendNm, jdbcType=VARCHAR}
+			, VEND_OP_HOURS = #{vendOpHours, jdbcType=VARCHAR}
+			, VEND_CONTACT = #{vendContact, jdbcType=VARCHAR}
+			, VEND_LOC = #{vendLoc, jdbcType=VARCHAR}
+			, VEND_MVP = #{vendMvp, jdbcType=VARCHAR}
+			, VEND_DESC = #{vendDesc, jdbcType=VARCHAR}
+			, VEND_TYPE = #{vendType, jdbcType=CHAR}
+			, VEND_DT = #{vendDt, jdbcType=DATE}
+			, VEND_STATUS = #{vendStatus, jdbcType=VARCHAR}
+			, VEND_IMG = #{vendImg, jdbcType=VARCHAR}
+		WHERE
+		     VEND_ID = #{vendId, jdbcType=CHAR}
+	</update>
+</mapper>

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.atch.dao.AtchFileDAO">
+	<select id="selectAtchFileDetail" parameterType="AtchFileDetailVO" 
+										resultType="AtchFileDetailVO">
+		SELECT
+			ATCH_FILE_ID, FI_SN, FI_COURS, FI_NM
+			, FI_ORIGIN_NM, FI_EXTSN, FI_SIZE, FI_MIME
+		FROM ATCH_FILE_DETAIL
+		WHERE ATCH_FILE_ID = #{atchFileId} AND FI_SN = #{fiSn}
+	</select>
+	
+	<resultMap type="AtchFileVO" id="atchFileMap">
+		<id property="atchFileId" column="A_ID" />
+		<result property="creatDt" column="CREAT_DT" />
+		<result property="useAt" column="USE_AT" />
+		<collection property="detailList" ofType="AtchFileDetailVO" autoMapping="true">
+			<id property="atchFileId" column="B_ID" />
+			<id property="fiSn" column="FI_SN" />
+		</collection>
+	</resultMap>
+	
+	<select id="selectAtchFileGroup" parameterType="String" resultMap="atchFileMap">
+		SELECT A.ATCH_FILE_ID A_ID
+			, B.ATCH_FILE_ID B_ID
+		    , FI_SN, FI_COURS, FI_NM
+		    , FI_ORIGIN_NM, FI_EXTSN, FI_SIZE
+		    , CREAT_DT, USE_AT
+		FROM ATCH_FILE A LEFT OUTER JOIN ATCH_FILE_DETAIL B ON (A.ATCH_FILE_ID = B.ATCH_FILE_ID)
+		WHERE A.ATCH_FILE_ID = #{atchFileId}
+	</select>
+	
+	<insert id="insertAtchFileGroup" parameterType="AtchFileVO">
+		INSERT ALL
+			INTO ATCH_FILE (ATCH_FILE_ID, CREAT_DT, USE_AT)
+			VALUES(#{atchFileId}, SYSDATE, 'Y')
+			<foreach collection="detailList" item="atch" index="idx">
+				INTO ATCH_FILE_DETAIL(
+					ATCH_FILE_ID
+					, FI_SN
+					, FI_COURS
+					, FI_NM
+					, FI_ORIGIN_NM
+					, FI_EXTSN
+					, FI_SIZE
+					, FI_MIME
+				) VALUES(
+					  #{atchFileId,jdbcType=NUMERIC}
+					, #{idx,jdbcType=NUMERIC}+1
+					, #{atch.fiCours,jdbcType=VARCHAR}
+					, #{atch.fiNm,jdbcType=VARCHAR}
+					, #{atch.fiOriginNm,jdbcType=VARCHAR}
+					, #{atch.fiExtsn,jdbcType=VARCHAR}
+					, #{atch.fiSize,jdbcType=NUMERIC}
+					, #{atch.fiMime,jdbcType=VARCHAR}
+				)
+			</foreach>
+		SELECT * FROM DUAL
+	</insert>
+	
+	<update id="updateAtchFileGroup" parameterType="AtchFileVO">
+		INSERT ALL
+			<foreach collection="detailList" item="atch" index="idx">
+				INTO ATCH_FILE_DETAIL(
+					ATCH_FILE_ID
+					, FI_SN
+					, FI_COURS
+					, FI_NM
+					, FI_ORIGIN_NM
+					, FI_EXTSN
+					, FI_SIZE
+					, FI_MIME
+				) VALUES(
+					  #{atchFileId,jdbcType=NUMERIC}
+					, #{idx,jdbcType=NUMERIC}+1
+					, #{atch.fiCours,jdbcType=VARCHAR}
+					, #{atch.fiNm,jdbcType=VARCHAR}
+					, #{atch.fiOriginNm,jdbcType=VARCHAR}
+					, #{atch.fiExtsn,jdbcType=VARCHAR}
+					, #{atch.fiSize,jdbcType=NUMERIC}
+					, #{atch.fiMime,jdbcType=VARCHAR}
+				)
+			</foreach>
+		SELECT * FROM DUAL
+	</update>
+	
+	<delete id="deleteAtchFileGroup" parameterType="string">
+	  	DELETE FROM ATCH_FILE WHERE ATCH_FILE_ID = #{atchFileId}
+	</delete>
+	<delete id="deleteAtchFileDetails" parameterType="string">
+	  	DELETE FROM ATCH_FILE_DETAIL WHERE ATCH_FILE_ID = #{atchFileId}
+	</delete>
+</mapper>

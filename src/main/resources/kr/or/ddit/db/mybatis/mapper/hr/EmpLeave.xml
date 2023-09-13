@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.hr.empLeave.dao.EmpLeaveDAO">
+	
+	<select id="selectElList" resultType="LeaveEmpVO">
+		SELECT
+		    EL.el_year,
+		    EL.el_emp,
+		    EL.el_have_al,
+		    EL.el_use_sk,
+		    EL.el_use_pd,
+		    EL.el_use_al,
+		    EL.el_use_up,
+		    EL.el_use_pl,
+		    EL.el_use_fe,
+		    E.emp_nm
+		FROM
+		    emp_leave EL
+		INNER JOIN
+		
+		    employee E ON EL.el_emp = E.emp_no
+	</select>
+	
+	
+	<update id="updateElSk" parameterType="LeaveEmpVO">
+		UPDATE EMP_LEAVE EL
+		SET EL.EL_USE_SK = EL.EL_USE_SK + (
+							   SELECT SUM(VR_PERIOD)
+							    FROM VACATION_REQ
+							    WHERE VR_EMP_NO = #{elEmp, jdbcType=VARCHAR}
+							      AND VR_TYPE = 'SK'
+							      AND VR_ID = #{vrId, jdbcType=VARCHAR}
+							)
+		WHERE EL.EL_EMP = #{elEmp, jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateElAl" parameterType="LeaveEmpVO">
+		UPDATE EMP_LEAVE
+	    SET EL_USE_AL = EL_USE_AL + (
+					    	SELECT SUM(VR_PERIOD)
+						    FROM VACATION_REQ
+						    WHERE VR_EMP_NO = #{elEmp, jdbcType=VARCHAR}
+						      AND VR_TYPE = 'AL'
+						      AND VR_ID = #{vrId, jdbcType=VARCHAR}
+					    ),
+			EL_HAVE_AL = EL_HAVE_AL - EL_USE_AL		    
+	    WHERE  EL_EMP = #{elEmp, jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateElPl" parameterType="LeaveEmpVO">
+		UPDATE EMP_LEAVE
+		
+	    SET EL_USE_PL = EL_USE_PL + (
+	    	SELECT SUM(VR_PERIOD)
+		    FROM VACATION_REQ
+		    WHERE VR_EMP_NO = #{elEmp, jdbcType=VARCHAR}
+		      AND VR_TYPE = 'PL'
+		      AND VR_ID = #{vrId, jdbcType=VARCHAR}
+	    )
+	    WHERE  EL_EMP = #{elEmp, jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateElFe" parameterType="LeaveEmpVO">
+		UPDATE EMP_LEAVE
+	    SET EL_USE_FE = EL_USE_FE + (
+	    	SELECT SUM(VR_PERIOD)
+		    FROM VACATION_REQ
+		    WHERE VR_EMP_NO = #{elEmp, jdbcType=VARCHAR}
+		      AND VR_TYPE = 'FE'
+		      AND VR_ID = #{vrId, jdbcType=VARCHAR}
+	    )
+	    WHERE  EL_EMP = #{elEmp, jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateElUp" parameterType="LeaveEmpVO">
+		UPDATE EMP_LEAVE
+	    SET EL_USE_UP = EL_USE_UP + (
+	    	SELECT SUM(VR_PERIOD)
+		    FROM VACATION_REQ
+		    WHERE VR_EMP_NO = #{elEmp, jdbcType=VARCHAR}
+		      AND VR_TYPE = 'UP'
+		      AND VR_ID = #{vrId, jdbcType=VARCHAR}
+	    )
+	    WHERE  EL_EMP = #{elEmp, jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateElPd" parameterType="LeaveEmpVO">
+		UPDATE EMP_LEAVE
+	    SET EL_USE_PD = EL_USE_PD + (
+	    	SELECT SUM(VR_PERIOD)
+		    FROM VACATION_REQ
+		    WHERE VR_EMP_NO = #{elEmp, jdbcType=VARCHAR}
+		      AND VR_TYPE = 'PD'
+		      AND VR_ID = #{vrId, jdbcType=VARCHAR}
+	    )
+	    WHERE  EL_EMP = #{elEmp, jdbcType=VARCHAR}
+	</update>
+	
+</mapper>

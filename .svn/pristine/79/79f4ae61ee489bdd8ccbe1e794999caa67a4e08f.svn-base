@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.hr.resignEmp.dao.ResignEmpDAO">
+
+
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="kr.or.ddit.vo.PaginationInfo">
+		SELECT COUNT(*)
+		FROM EMPLOYEE
+<!-- 		<include refid="searchFrag" /> -->
+		WHERE EMP_STATUS = 4
+	</select>
+	
+	<select id="selectRempList" parameterType="EmployeeVO">
+		SELECT B.*
+			FROM (
+				SELECT ROWNUM RNUM, A.*
+				FROM (
+					SELECT
+						EMP_NO, EMP_NM, EMP_DEPT_NO, EMP_TEAM, EMP_ROLE_NM, EMP_STATUS, EMP_RESIGN_DT
+					FROM EMPLOYEE
+					WHERE EMP_STATUS = 4
+<!-- 			<include refid="searchFrag" /> -->
+				ORDER BY EMP_RESIGN_DT DESC
+			) A
+		) B
+		<![CDATA[   
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectRemp" parameterType="EmployeeVO">
+		SELECT
+			EMP_NO, EMP_NM, EMP_BIR,
+			EMP_GENDER, EMP_EMAIL, EMP_ADDR,
+			EMP_CONTACT, EMP_STATUS, EMP_JOIN_DT,
+			EMP_RESIGN_DT, EMP_CRT_DT, EMP_UPD_DT,
+			EMP_DEPT_NO, EMP_ROLE_NM, EMP_CTR_FILE,
+			EMP_TEAM, EMP_ACCNUM,EMP_EMAILPASS
+		FROM EMPLOYEE
+		WHERE EMP_NO = #{empNo}
+	</select>
+
+</mapper>

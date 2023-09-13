@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.hr.common.dao.HrCommonDAO">
+
+	<select id="selectEpList" resultType="kr.or.ddit.vo.CommonCodeVO">
+
+		SELECT C.CODE_ID, C.CODE_NM, C.CODE_VAL, COUNT(es.ES_STATUS) AS APPR_COUNT
+		FROM COMMON_CODE C
+		LEFT JOIN EPL_STATUS es ON C.CODE_ID = es.EPL_CD AND es.ES_STATUS = 'APPR'
+		WHERE C.CODE_UPPER = 'EP' AND C.CODE_ACT = 'Y'
+		GROUP BY C.CODE_ID, C.CODE_NM, C.CODE_VAL
+		ORDER BY C.CODE_NM ASC
+
+	</select>
+	
+</mapper>

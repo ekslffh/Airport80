@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.safety.confiscation.dao.ConfiscationDAO">
+
+	<sql id="searchFrag">
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'writer'">
+						AND (INSTR(CS_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'title'">
+						OR INSTR(CS_CTGR, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'content'">
+						OR INSTR(CS_DISPO_MTHD, #{simpleCondition.searchWord}) >
+						0)
+					</when>
+					<otherwise>
+						AND (INSTR(CS_NM, #{simpleCondition.searchWord}) > 0
+						or
+						INSTR(CS_CTGR, #{simpleCondition.searchWord}) > 0
+						or
+						INSTR(CS_DISPO_MTHD, #{simpleCondition.searchWord}) > 0)
+					</otherwise>
+				</choose>
+			</if>
+	</sql>
+	
+	<sql id="searchWhereFrag">
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'writer'">
+						AND (INSTR(CS_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'title'">
+						OR INSTR(CS_CTGR, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'content'">
+						OR INSTR(CS_DISPO_MTHD, #{simpleCondition.searchWord}) >
+						0)
+					</when>
+					<otherwise>
+						AND (INSTR(CS_NM, #{simpleCondition.searchWord}) > 0
+						or
+						INSTR(CS_CTGR, #{simpleCondition.searchWord}) > 0
+						or
+						INSTR(CS_DISPO_MTHD, #{simpleCondition.searchWord}) > 0)
+					</otherwise>
+				</choose>
+			</if>
+	</sql>
+
+
+	<select id="selectTotalRecord" resultType="long" parameterType="PaginationInfo">
+		select COUNT(*)
+		FROM CONFISCATION
+		WHERE
+	        CS_DEL = 'N'
+		<include refid="searchWhereFrag" />
+	</select>
+	
+	
+	<select id="selectDisposalRecord" resultType="long" parameterType="PaginationInfo">
+			select COUNT(*)
+			FROM CONFISCATION
+	        WHERE
+	        CS_DEL = 'Y'
+	        AND CS_IMG IS NOT NULL 
+	        AND CS_DISPO_MTHD = 'DIS'
+	        <include refid="searchFrag" />
+	</select>
+	
+	
+	<select id="selectConfiscationList" resultType="ConfiscationVO">
+		  SELECT B.*
+    FROM (
+        SELECT ROWNUM RNUM, A.*
+        FROM (
+            SELECT
+                b.cs_id,
+                b.cs_ctgr,
+                b.cs_nm,
+                b.cs_qtt,
+                cs_ts,
+                a.emp_nm as "employee.empNm",
+                c.code_nm as "common.codeNm"
+            FROM
+                employee a
+                INNER JOIN confiscation b ON a.emp_no = b.cs_writer
+                INNER JOIN common_code c ON b.cs_dispo_mthd = c.code_id
+            WHERE b.CS_DEL = 'N' 
+            
+            <include refid="searchFrag" />
+           
+              ORDER BY CASE WHEN c.code_nm = '폐기' THEN 1 ELSE 2 END ASC,
+              TO_NUMBER(REGEXP_SUBSTR(cs_id, '[0-9]+')) DESC
+        ) A
+    ) B
+    <![CDATA[ 
+    WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+    ]]>
+	</select>
+	
+	
+	
+	<select id="selectConfiscation" resultType="ConfiscationVO">
+	SELECT
+		B.CS_ID, B.CS_NM, B.CS_CTGR, B.CS_QTT, B.CS_PS_NAME, B.CS_PNO,
+		B.cs_ts, B.CS_RSN, A.ZONE_FLOOR as "zone.zoneFloor", 
+		A.ZONE_CTGR as "zone.zoneCtgr", B.SLOG_ID,  C.CODE_NM AS "common.codeNm"
+	FROM
+		ZONE A
+		INNER JOIN CONFISCATION B 
+		ON A.ZONE_CD = B.CS_LOC
+		INNER JOIN COMMON_CODE C
+		ON B.CS_DISPO_MTHD = C.CODE_ID
+	WHERE cs_id = #{csId}
+	</select>
+	
+	
+	
+	<insert id="insertConfiscation" parameterType="ConfiscationVO">
+    <selectKey order="BEFORE" resultType="string" keyProperty="csId">
+        SELECT 'C' || TO_CHAR(CS_ID_SEQ.NEXTVAL, 'FM00009') FROM DUAL
+    </selectKey>
+    INSERT INTO confiscation (
+        cs_id,
+        cs_img,
+        cs_nm,
+        cs_ctgr,
+        cs_qtt,
+        cs_ts,
+        cs_rsn,
+        cs_loc,
+        cs_dispo_mthd,
+        cs_dispo_ts,
+        cs_crt_ts,
+        cs_upd_ts,
+        slog_id,
+        cs_writer,
+        cs_pno,
+        cs_ps_name
+    ) VALUES (
+        #{csId,jdbcType=NUMERIC},
+        #{csImg,jdbcType=VARCHAR},
+        #{csNm,jdbcType=VARCHAR},
+        #{csCtgr,jdbcType=VARCHAR},
+        #{csQtt,jdbcType=NUMERIC},
+        #{csTs,jdbcType=TIMESTAMP},
+        #{csRsn,jdbcType=VARCHAR},
+        #{csLoc,jdbcType=VARCHAR},
+        #{csDispoMthd,jdbcType=VARCHAR},
+        #{csTs} + INTERVAL '3' MONTH,
+        SYSTIMESTAMP,
+        #{csUpdTs,jdbcType=TIMESTAMP},
+        #{slogId,jdbcType=VARCHAR},
+        #{csWriter,jdbcType=CHAR},
+        #{csPno,jdbcType=VARCHAR},
+        #{csPsName,jdbcType=VARCHAR}
+    )
+</insert>
+
+<update id="updateConfiscation" parameterType="ConfiscationVO">
+	UPDATE confiscation
+	SET
+		  CS_NM = #{csNm, jdbcType=VARCHAR}
+		, CS_CTGR = #{csCtgr, jdbcType=VARCHAR}
+		, CS_QTT = #{csQtt, jdbcType=NUMERIC}
+		, CS_TS = #{csTs, jdbcType=TIMESTAMP}
+		, CS_RSN = #{csRsn, jdbcType=VARCHAR}
+		, CS_LOC = #{csLoc, jdbcType=VARCHAR}
+		, CS_DISPO_MTHD = #{csDispoMthd, jdbcType=VARCHAR}
+		, CS_UPD_TS = CURRENT_TIMESTAMP
+		, SLOG_ID = #{slogId, jdbcType=VARCHAR}
+	    , CS_PNO = #{csPno, jdbcType=VARCHAR}
+		, CS_PS_NAME = #{csPsName, jdbcType=VARCHAR}
+	WHERE cs_id = #{csId}
+</update>
+
+<update id="deleteConfiscation" parameterType="string">
+	UPDATE confiscation
+	SET
+	    CS_DEL = 'Y'
+	WHERE
+	CS_ID = #{csId}
+</update>
+
+<update id="updateConfisMthd" parameterType="ConfiscationVO">
+	UPDATE confiscation
+	SET
+		CS_DISPO_MTHD = #{csDispoMthd, jdbcType=VARCHAR}
+	WHERE
+	CS_ID = #{csId}
+</update>
+
+
+<update id="updateDisposal" parameterType="ConfiscationVO">
+	UPDATE confiscation
+	SET
+	   CS_IMG = #{csImg, jdbcType=VARCHAR}
+	 , CS_DEL = 'Y'
+	WHERE
+		CS_ID = #{csId}
+
+</update>
+
+
+<select id="selectDisposalList" resultType="ConfiscationVO">
+	  SELECT B.*
+   FROM (
+       SELECT ROWNUM RNUM, A.*
+       FROM (
+           SELECT      
+			b.cs_id,
+			b.cs_ctgr,
+			b.cs_nm,
+			b.cs_qtt,
+			b.cs_dispo_ts,
+			a.emp_nm as "employee.empNm",
+			c.code_nm as "common.codeNm"
+			FROM 
+			employee a
+			INNER JOIN confiscation b ON a.emp_no = b.cs_writer
+			INNER JOIN common_code c ON b.cs_dispo_mthd = c.code_id
+			WHERE
+			CS_DEL = 'Y'
+			AND CS_IMG IS NOT NULL 
+			AND CS_DISPO_MTHD = 'DIS'
+           
+           <include refid="searchFrag" />
+           ORDER BY TO_NUMBER(REGEXP_SUBSTR(cs_id,'[0-9]+')) ASC
+       ) A
+   ) B
+   <![CDATA[ 
+   WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+   ]]>
+</select>
+
+
+<resultMap type="ConfiscationVO" id="confiscationMap" autoMapping="true">
+	<id property="csId" column="CS_ID"/>
+	
+	<association property="confisInfo" javaType="ConfiscationInfoVO" autoMapping="true"/>
+	
+	<association property="common" javaType="CommonCodeVO" >
+		<id property="codeId" column="CODE_ID"/>
+		<result property="codeNm" column="CODE_NM"/>
+	</association>
+	
+	<association property="zone" javaType="ZoneVO">
+	     <id property="zoneCd" column="ZONE_CD"/>
+	     <result property="zoneFloor" column="ZONE_FLOOR"/>
+	     <result property="zoneCtgr" column="ZONE_CTGR"/>
+	</association>
+	
+	<association property="fileGroup" javaType="AtchFileVO" autoMapping="true">
+		<id property="atchFileId" column="ATCH_FILE_ID" />
+		
+		<collection property="detailList" ofType="AtchFileDetailVO" autoMapping="true">
+			<id property="atchFileId" column="ATCH_FILE_ID"/>
+			<id property="fiCours" column="FI_COURS"/>
+			<id property="fiNm" column="FI_NM"/>
+			<id property="fiExtsn" column="FI_EXTSN"/>
+		</collection>
+	</association>
+	
+</resultMap>
+
+<select id="selectDisposalOne" resultMap="confiscationMap">
+WITH ATCH_FILE_VIEW AS(
+		    SELECT *
+		    FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL 
+		            USING (ATCH_FILE_ID)
+) 
+SELECT 
+    CS_ID, CS_NM, CS_CTGR, CS_QTT, CS_PS_NAME, CS_PNO,
+    CS_TS, CS_RSN, ZONE_FLOOR, ZONE_CTGR, SLOG_ID, CODE_NM
+    , FI_COURS, FI_NM, FI_EXTSN
+FROM CONFISCATION
+INNER JOIN ATCH_FILE_VIEW ON (ATCH_FILE_ID = CS_IMG)
+INNER JOIN ZONE ON(ZONE_CD = CS_LOC)
+INNER JOIN COMMON_CODE ON (CS_DISPO_MTHD = CODE_ID)
+WHERE
+CS_DEL = 'Y'
+AND CS_IMG IS NOT NULL 
+AND (CS_DISPO_MTHD = 'DIS')
+AND CS_ID = #{csId}
+
+</select>
+
+
+
+
+
+</mapper>

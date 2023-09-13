@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.custNoticeBrd.dao.CustNoticeBrdDAO">	
+	<sql id="searchFrag">
+		<where>
+        	<if test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+	        	<choose>
+	        		
+	        		<when test="simpleCondition.searchType eq 'title'">
+	        			INSTR(CNB_TITLE, #{simpleCondition.searchWord}) > 0
+	        		</when>
+	        		<when test="simpleCondition.searchType eq 'writer'">
+	        			INSTR(CNB_WRITER, #{simpleCondition.searchWord}) > 0
+	        		</when>
+	        		
+	        		<otherwise>
+		        		INSTR(CNB_TITLE, #{simpleCondition.searchWord}) > 0
+		        		OR
+		        		INSTR(CNB_WRITER, #{simpleCondition.searchWord}) > 0
+	        		</otherwise>
+	        	</choose>
+        	</if>
+        </where>
+	</sql>
+
+	<select id="selectTotalRecord" resultType="long" parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM CUST_NOTICE_BRD
+		<include refid="searchFrag" />
+	</select>
+	
+
+
+	
+	<select id="selectCnbList" resultType="CustNoticeBrdVO" parameterType="PaginationInfo">
+		SELECT B.*
+			FROM (
+				SELECT ROWNUM RNUM, A.*
+				FROM(
+					SELECT
+				        CNB_NO, CNB_TITLE,
+					    CNB_WRITER, CNB_CRT_TS,  CNB_VWS
+				    FROM CUST_NOTICE_BRD
+		    		<include refid="searchFrag" />
+		    		ORDER BY CNB_NO DESC
+		    	) A
+		    ) B
+		    <![CDATA[   
+	      WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	      ]]>
+		
+
+
+	</select>
+	
+	<resultMap type="CustNoticeBrdVO" id="cnbMap" autoMapping="true">
+		<id property="cnbTitle" column="CNB_TITLE"/>
+		<association property="fileGroup" javaType="AtchFileVO">
+			<id property="atchFileId" column="ATCH_FILE_ID"/>
+			<result property="creatDt" column="CREAT_DT"/>
+			<result property="useAt" column="USE_AT"/>
+			<collection property="detailList" ofType="AtchFileDetailVO" autoMapping="true">
+				<id property="atchFileId" column="ATCH_FILE_ID"/>
+				<id property="fiSn" column="FI_SN"/>
+			</collection>
+		</association>
+	</resultMap>
+	
+	<select id="selectCnb" parameterType="int" resultMap="cnbMap">
+		WITH ATCH_FILE_VIEW AS ( 
+		    SELECT * FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL USING (ATCH_FILE_ID) 
+		) 
+		SELECT 
+		    CNB_NO, CNB_TITLE, CNB_CONTENT
+		    , CNB_CRT_TS, CNB_UPT_TS, CNB_VWS
+		    , CNB_IMG
+		    , CNB_WRITER, CNB_ATCH_FILE
+		    , ATCH_FILE_ID, CREAT_DT, USE_AT
+		    , ATCH_FILE_ID, FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE, FI_MIME
+		FROM CUST_NOTICE_BRD 
+			LEFT OUTER JOIN ATCH_FILE_VIEW ON (ATCH_FILE_ID = CNB_ATCH_FILE)
+		WHERE CNB_NO= #{cnbNo}
+	</select>
+
+	
+	
+	<insert id="insertCnb" parameterType="CustNoticeBrdVO">
+		<selectKey order="BEFORE" keyProperty="cnbNo" resultType="integer">
+			SELECT CNB_SEQ.NEXTVAL
+			FROM DUAL
+		</selectKey>
+		INSERT INTO CUST_NOTICE_BRD(
+			CNB_NO
+            , CNB_TITLE
+            , CNB_CONTENT
+            , CNB_WRITER
+            , CNB_ATCH_FILE
+		)VALUES(
+
+             #{cnbNo,jdbcType=NUMERIC}
+            , #{cnbTitle,jdbcType=VARCHAR}
+            , #{cnbContent,jdbcType=VARCHAR}
+            , '김운영'
+            , #{atchFileId,jdbcType=CHAR}
+		)
+	</insert>
+	
+	<update id ="updateCnb" parameterType="CustNoticeBrdVO">
+		UPDATE CUST_NOTICE_BRD
+		SET
+
+			 CNB_TITLE= #{cnbTitle ,jdbcType=VARCHAR}
+			, CNB_CONTENT= #{cnbContent ,jdbcType=VARCHAR}
+			, CNB_WRITER= #{cnbWriter ,jdbcType=CHAR}
+			, CNB_ATCH_FILE =#{atchFileId,jdbcType=CHAR}
+		WHERE CNB_NO = #{cnbNo ,jdbcType=NUMERIC}
+	
+	
+	</update>
+	
+	<delete id="deleteCnb">
+		DELETE FROM CUST_NOTICE_BRD
+		WHERE CNB_NO = #{cnbNo}
+	</delete>
+	
+	<update id="increaseViews" parameterType="int">
+		UPDATE CUST_NOTICE_BRD
+		SET
+			CNB_VWS = CNB_VWS+1
+		WHERE
+			CNB_NO = #{cnbNo}
+	</update>
+	
+</mapper>

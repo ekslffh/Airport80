@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.Infra.facility.dao.FacilityDAO">
+	
+	<select id="convFacilityList" resultType="FacilityVO">
+		SELECT FACILITY.*, ZONE.ZONE_FLOOR as "zone.zoneFloor", ZONE.ZONE_CTGR as "zone.zoneCtgr"
+			FROM FACILITY
+			LEFT JOIN ZONE ON FACILITY.ZONE_CD = ZONE.ZONE_CD
+		WHERE FACILITY.FC_CTGR = '편의시설'
+	</select>
+
+	<select id="searchFacilityList" resultType="FacilityVO">
+		SELECT
+		    F.FC_CD,
+		    F.FC_NM,
+		    F.FC_STATUS,
+		    F.FC_CTGR,
+		    F.ZONE_CD
+		FROM 
+		    FACILITY F
+		INNER JOIN 
+		    ZONE Z ON F.ZONE_CD = Z.ZONE_CD
+		WHERE
+		    F.ZONE_CD = #{zoneCd}
+	</select>
+	
+	<select id="facilityList" resultType="FacilityVO">
+		   SELECT 
+				FC_CD,
+				FC_NM,
+		        ZONE_CD
+			FROM
+			    FACILITY
+	</select>
+	
+	<select id="getFacility" resultType="FacilityVO" parameterType="string">
+		SELECT FACILITY.*, ZONE.ZONE_FLOOR as "zone.zoneFloor", ZONE.ZONE_CTGR as "zone.zoneCtgr"
+			FROM FACILITY
+			LEFT JOIN ZONE ON FACILITY.ZONE_CD = ZONE.ZONE_CD
+		WHERE FACILITY.FC_CD = #{fcCd}
+	</select>
+	
+	<update id="updateFacility" parameterType="FacilityVO">
+		UPDATE FACILITY
+		SET
+			FC_NM = #{fcNm, jdbcType=VARCHAR}
+			, FC_STATUS = #{fcStatus, jdbcType=VARCHAR}
+			, FC_START_HOURS = #{fcStartHours, jdbcType=CHAR}
+			, FC_END_HOURS = #{fcEndHours, jdbcType=CHAR}
+		WHERE FC_CD = #{fcCd, jdbcType=VARCHAR}
+	
+	</update>
+</mapper>

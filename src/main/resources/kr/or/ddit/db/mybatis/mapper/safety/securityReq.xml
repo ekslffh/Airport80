@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.safety.ssupport.dao.SecurityReqDAO">
+
+
+	<resultMap type="SecurityReqVO" id="securityMap" autoMapping="true">
+		<id property="srId" column="SR_ID"/>
+		<result property="srCa" column="SR_CA_CODE_NM"/>
+		<result property="srStatus" column="SR_STATUS_CODE_NM"/>
+		<result property="srReqMem" column="SR_EMP_NM"/>
+		
+		<association property="common" javaType="CommonCodeVO">
+			<result property="codeId" column="SR_CA_CODE_ID"/>
+			<result property="codeCont" column="CODE_CONT"/>
+		</association>	
+	
+		
+		<association property="zone" javaType="ZoneVO" >
+			<result property="zoneFloor" column="ZONE_FLOOR"/>
+			<result property="zoneCtgr" column="ZONE_CTGR"/>
+			<result property="zoneCd" column="ZONE_CD"/>
+		</association>
+	</resultMap>
+	
+		<select id="selectSReqList" resultMap="securityMap">
+			<![CDATA[
+			SELECT 
+			IT.SR_ID, CCN.CODE_NM SR_CA_CODE_NM, Z.ZONE_FLOOR, Z.ZONE_CTGR, E.EMP_NM SR_EMP_NM, IT.SR_TS , 
+			CC.CODE_NM SR_STATUS_CODE_NM, Z.ZONE_CD, CCN.CODE_ID SR_CA_CODE_ID, CCN.CODE_CONT  
+			FROM SECURITY_REQ IT
+			LEFT OUTER JOIN  COMMON_CODE CCN
+			ON IT.SR_CA = CCN.CODE_ID
+			LEFT OUTER JOIN COMMON_CODE CC
+			ON IT.SR_STATUS = CC.CODE_ID
+			LEFT OUTER JOIN ZONE Z
+			ON IT.SR_LOC = Z.ZONE_CD
+			LEFT OUTER JOIN EMPLOYEE E 
+			ON IT.SR_REQ_MEM = E.EMP_NO
+			WHERE CC.CODE_NM <> '완료'
+			ORDER BY 
+		    CASE 
+		        WHEN SR_STATUS_CODE_NM = '요청' THEN 0 
+		        ELSE 1 
+		    END,
+		    CAST(SUBSTR(IT.SR_ID, 3) AS INT) DESC
+		    ]]>
+		</select>
+
+	<insert id="insertSReq" parameterType="SecurityReqVO">
+	 <selectKey order="BEFORE" resultType="string" keyProperty="srId">
+        SELECT 'SR' || TO_CHAR(SR_ID_SEQ.NEXTVAL, 'FM00009') FROM DUAL
+    </selectKey>
+	INSERT INTO security_req (
+    sr_id,
+    sr_ca,
+    sr_loc,
+    sr_content,
+    sr_ts,
+    sr_req_mem
+	) VALUES (
+	   #{srId,jdbcType=NUMERIC}
+	, #{srCa,jdbcType=VARCHAR}
+	, #{srLoc,jdbcType=VARCHAR}
+	, #{srContent,jdbcType=VARCHAR}
+	, SYSTIMESTAMP
+	, #{srReqMem,jdbcType=CHAR}
+	)
+	</insert>
+	
+	
+	<resultMap type="SecurityReqVO" id="secReqMap" autoMapping="true">
+	<id property="srId" column="SR_ID"/>
+	<result property="srReqMem" column="EMP_NM"/>
+	<result property="srCa" column="CA_CODE_NM"/>
+	<result property="srTs" column="SR_TS"/>
+	<result property="srContent" column="SR_CONTENT"/>
+	<result property="srStatus" column="ST_CODE_NM"/>
+
+	<association property="common" javaType="CommonCodeVO">
+		<result property="codeId" column="SR_CA"/>
+	</association>	
+	
+	<association property="zone" javaType="ZoneVO" >
+		<result property="zoneFloor" column="ZONE_FLOOR"/>
+		<result property="zoneCtgr" column="ZONE_CTGR"/>
+	</association>
+	</resultMap>
+	
+	<select id="selectSecReq" resultMap="secReqMap">
+	SELECT
+	SR_ID, EMP_NM, CA.CODE_NM "CA_CODE_NM", ZONE_FLOOR, ZONE_CTGR, SR_TS, SR_CONTENT, SR_CA ,ST.CODE_NM "ST_CODE_NM"
+	
+	FROM security_req
+	LEFT OUTER JOIN COMMON_CODE CA
+	ON SR_CA = CA.CODE_ID
+    LEFT OUTER JOIN COMMON_CODE ST
+    ON SR_STATUS = ST.CODE_ID 
+	LEFT OUTER JOIN ZONE 
+	ON SR_LOC = ZONE_CD
+	LEFT OUTER JOIN EMPLOYEE
+	ON SR_REQ_MEM = EMP_NO
+	    
+	WHERE sr_id = #{srId}	
+	</select>
+
+	<update id="updateSqStatus" parameterType="String">
+	UPDATE security_req
+	SET
+	SR_STATUS = 'RES'
+	WHERE sr_id = #{srId}	
+	</update>
+	
+	<update id="updateSecComplt" parameterType="SecurityReqVO">
+	UPDATE security_req
+	SET
+	  SR_PRC_DT = #{srPrcDt, jdbcType=TIMESTAMP}
+	, SR_PRC_CT = #{srPrcCt, jdbcType=VARCHAR}
+	, SR_STATUS = 'COMP'
+	WHERE sr_id = #{srId}	
+	</update>
+	
+	<select id="selectSecUptForm" resultType="SecurityReqVO">
+	SELECT
+	*
+	FROM
+	security_req
+	WHERE sr_id = #{srId}	
+	</select>
+	
+	<select id="getPorcessingTime" resultType="SecurityReqVO">
+		SELECT
+			COUNT(*) AS COUNT_REQ ,
+			TO_CHAR(AVG(
+				EXTRACT(DAY FROM (SR_PRC_DT - SR_TS)) * 86400 +
+				EXTRACT(HOUR FROM (SR_PRC_DT - SR_TS)) * 3600 +
+				EXTRACT(MINUTE FROM (SR_PRC_DT - SR_TS)) * 60 +
+				EXTRACT(SECOND FROM (SR_PRC_DT - SR_TS))
+			), '9999999.999999') AS PROS_TIME
+		FROM
+			SECURITY_REQ
+	</select>
+
+	<select id="getChart" resultType="SecurityReqVO">
+		SELECT
+			COUNT(*) AS COUNT_REQ ,
+			SUM(CASE WHEN SR_LOC LIKE '2%M' AND SR_CA = 'CRO' THEN 1 ELSE 0 END) AS COUNT_M2CRO,
+		    SUM(CASE WHEN SR_LOC LIKE '2%M' AND SR_CA = 'OTH' THEN 1 ELSE 0 END) AS COUNT_M2OTH,
+		    SUM(CASE WHEN SR_LOC LIKE '2%M' AND SR_CA = 'PER' THEN 1 ELSE 0 END) AS COUNT_M2PER,
+		    SUM(CASE WHEN SR_LOC LIKE '2%M' AND SR_CA = 'ART' THEN 1 ELSE 0 END) AS COUNT_M2ART,
+		    SUM(CASE WHEN SR_LOC LIKE '2%C' AND SR_CA = 'CRO' THEN 1 ELSE 0 END) AS COUNT_C2CRO,
+		    SUM(CASE WHEN SR_LOC LIKE '2%C' AND SR_CA = 'OTH' THEN 1 ELSE 0 END) AS COUNT_C2OTH,
+		    SUM(CASE WHEN SR_LOC LIKE '2%C' AND SR_CA = 'PER' THEN 1 ELSE 0 END) AS COUNT_C2PER,
+		    SUM(CASE WHEN SR_LOC LIKE '2%C' AND SR_CA = 'ART' THEN 1 ELSE 0 END) AS COUNT_C2ART,
+		    SUM(CASE WHEN REGEXP_LIKE(SR_LOC, '^1F\d+$') AND SR_CA = 'CRO' THEN 1 ELSE 0 END) AS COUNT_F1CRO,
+		    SUM(CASE WHEN REGEXP_LIKE(SR_LOC, '^1F\d+$') AND SR_CA = 'OTH' THEN 1 ELSE 0 END) AS COUNT_F1OTH,
+		    SUM(CASE WHEN REGEXP_LIKE(SR_LOC, '^1F\d+$') AND SR_CA = 'PER' THEN 1 ELSE 0 END) AS COUNT_F1PER,
+		    SUM(CASE WHEN REGEXP_LIKE(SR_LOC, '^1F\d+$') AND SR_CA = 'ART' THEN 1 ELSE 0 END) AS COUNT_F1ART,
+		    SUM(CASE WHEN REGEXP_LIKE(SR_LOC, '^2F\d+$') AND SR_CA = 'CRO' THEN 1 ELSE 0 END) AS COUNT_F2CRO,
+		    SUM(CASE WHEN REGEXP_LIKE(SR_LOC, '^2F\d+$') AND SR_CA = 'OTH' THEN 1 ELSE 0 END) AS COUNT_F2OTH,
+		    SUM(CASE WHEN REGEXP_LIKE(SR_LOC, '^2F\d+$') AND SR_CA = 'PER' THEN 1 ELSE 0 END) AS COUNT_F2PER,
+		    SUM(CASE WHEN REGEXP_LIKE(SR_LOC, '^2F\d+$') AND SR_CA = 'ART' THEN 1 ELSE 0 END) AS COUNT_F2ART,
+		    SUM(CASE WHEN SR_LOC LIKE '1%M' AND SR_CA = 'CRO' THEN 1 ELSE 0 END) AS COUNT_M1CRO,
+		    SUM(CASE WHEN SR_LOC LIKE '1%M' AND SR_CA = 'OTH' THEN 1 ELSE 0 END) AS COUNT_M1OTH,
+		    SUM(CASE WHEN SR_LOC LIKE '1%M' AND SR_CA = 'PER' THEN 1 ELSE 0 END) AS COUNT_M1PER,
+		    SUM(CASE WHEN SR_LOC LIKE '1%M' AND SR_CA = 'ART' THEN 1 ELSE 0 END) AS COUNT_M1ART,
+		    SUM(CASE WHEN SR_LOC LIKE '1%C' AND SR_CA = 'CRO' THEN 1 ELSE 0 END) AS COUNT_C1CRO,
+		    SUM(CASE WHEN SR_LOC LIKE '1%C' AND SR_CA = 'OTH' THEN 1 ELSE 0 END) AS COUNT_C1OTH,
+		    SUM(CASE WHEN SR_LOC LIKE '1%C' AND SR_CA = 'PER' THEN 1 ELSE 0 END) AS COUNT_C1PER,
+		    SUM(CASE WHEN SR_LOC LIKE '1%C' AND SR_CA = 'ART' THEN 1 ELSE 0 END) AS COUNT_C1ART
+		FROM
+    		SECURITY_REQ
+	</select>
+	
+	<select id="selectCountReq" resultType="long">
+	SELECT COUNT (*) 
+	FROM  SECURITY_REQ WHERE SR_STATUS = 'REQ'
+	</select>
+	
+	<select id="selectCountRec" resultType="long">
+	SELECT COUNT (*) 
+	FROM  SECURITY_REQ WHERE SR_STATUS = 'RES'
+	</select>
+	
+	<select id="selectCountComp" resultType="long">
+	SELECT COUNT (*) 
+	FROM  SECURITY_REQ WHERE SR_STATUS = 'COMP'
+	</select>
+	
+</mapper>

@@ -1,0 +1,17 @@
+/* 날짜 회색 */
+.fc-day a {
+  color: gray;
+  text-decoration: none;
+}
+
+/* 일요일 날짜 빨간색 */
+.fc-day-sun a {
+  color: red;
+  text-decoration: none;
+}
+
+/* 토요일 날짜 파란색 */
+.fc-day-sat a {
+  color: blue;
+  text-decoration: none;
+}

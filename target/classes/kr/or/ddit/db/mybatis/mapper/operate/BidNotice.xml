@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.operate.bidNotice.dao.BidNoticeDAO">
+	<sql id="searchFrag">
+		<where>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'enterloc'">
+						INSTR(BN_ENTER_LOC, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'status'">
+						INSTR(BN_STATUS, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(BN_ENTER_LOC, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(BN_STATUS, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM BID_NOTICE
+		<include refid="searchFrag" />
+	</select>
+
+
+
+	<resultMap type="bidNoticeVO" id="bnMap" autoMapping="true">
+		<id property="bnNo" column="BN_NO"/>
+		<association property="fileGroup" javaType="AtchFileVO">
+			<id property="atchFileId" column="ATCH_FILE_ID"/>
+			<result property="creatDt" column="CREAT_DT"/>
+			<result property="useAt" column="USE_AT"/>
+			<collection property="detailList" ofType="AtchFileDetailVO" autoMapping="true">
+				<id property="atchFileId" column="ATCH_FILE_ID"/>
+				<id property="fiSn" column="FI_SN"/>
+			</collection>
+		</association>
+	</resultMap>
+
+	
+	<select id="selectBnList" resultType="bidNoticeVO" resultMap="bnMap"> 
+		WITH ATCH_FILE_VIEW AS ( 
+		    SELECT * FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL USING (ATCH_FILE_ID) 
+		) 
+		SELECT
+		BN_NO, BN_ENTER_LOC, BN_STATUS, BN_TITLE, BN_AMT, BN_DEADLINE, BN_START_TIME, BN_END_TIME, BN_ATCH_FILE
+		, ATCH_FILE_ID, CREAT_DT, USE_AT
+	    , ATCH_FILE_ID, FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE, FI_MIME
+		FROM BID_NOTICE
+		LEFT OUTER JOIN ATCH_FILE_VIEW ON (ATCH_FILE_ID = BN_ATCH_FILE)
+		ORDER BY BN_NO DESC
+<!-- 		WHERE BN_NO = #{bnNo} -->
+	</select>
+	
+	
+	
+
+
+
+
+	<select id="selectBn" resultType="bidNoticeVO" resultMap="bnMap">
+		WITH ATCH_FILE_VIEW AS ( 
+		    SELECT * FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL USING (ATCH_FILE_ID) 
+		) 
+		SELECT
+		BN_NO,
+		BN_DEADLINE,
+		BN_ENTER_LOC,
+		BN_AMT,
+		BN_STATUS,
+		BN_TITLE,
+		BN_IMG,
+		BN_START_TIME,
+		BN_END_TIME, BN_ATCH_FILE
+		, ATCH_FILE_ID, CREAT_DT, USE_AT
+	    , ATCH_FILE_ID, FI_SN, FI_COURS, FI_EXTSN, FI_ORIGIN_NM, FI_NM, FI_SIZE, FI_MIME
+		FROM BID_NOTICE
+			LEFT OUTER JOIN ATCH_FILE_VIEW ON (ATCH_FILE_ID = BN_ATCH_FILE)
+		WHERE BN_NO = #{bnNo}
+
+	</select>
+
+	<insert id="insertBn" parameterType="bidNoticeVO">
+		<selectKey order="BEFORE" keyProperty="bnNo"
+			resultType="int">
+			SELECT BN_SEQ.NEXTVAL
+			FROM DUAL
+		</selectKey>
+		INSERT INTO BID_NOTICE(
+		BN_NO,
+		BN_TITLE,
+		BN_DEADLINE,
+		BN_ENTER_LOC,
+		BN_AMT,
+		BN_STATUS,
+		BN_START_TIME,
+		BN_END_TIME,
+		BN_IMG,
+		BN_ATCH_FILE
+		)
+		VALUES(
+		#{bnNo,jdbcType=NUMERIC}
+		, #{bnTitle,jdbcType=VARCHAR}
+		, #{bnDeadline,jdbcType=TIMESTAMP}
+		, #{bnEnterLoc,jdbcType=VARCHAR}
+		, #{bnAmt,jdbcType=NUMERIC}
+		, '모집중'
+		, #{bnStartTime,jdbcType=VARCHAR}
+		, #{bnEndTime,jdbcType=VARCHAR}
+		, #{bnImg,jdbcType=VARCHAR}
+		, #{atchFileId,jdbcType=CHAR}
+		
+		)
+	</insert>
+
+	<update id="updateBn" parameterType="bidNoticeVO">
+		UPDATE BID_NOTICE
+		SET
+		BN_DEADLINE= #{bnDeadline ,jdbcType=TIMESTAMP}
+		, BN_ENTER_LOC=
+		#{bnEnterLoc ,jdbcType=VARCHAR}
+		, BN_AMT= #{bnAmt ,jdbcType=NUMERIC}
+		,BN_STATUS= #{bnStatus ,jdbcType=VARCHAR}
+		, BN_START_TIME= #{bnStartTime,jdbcType=VARCHAR}
+		,BN_END_TIME= #{bnEndTime,jdbcType=VARCHAR}
+		, BN_TITLE= #{bnTitle,jdbcType=VARCHAR}
+		, BN_IMG= #{bnImg,jdbcType=VARCHAR} 
+		, BN_ATCH_FILE =#{atchFileId,jdbcType=CHAR}
+		WHERE BN_NO=#{bnNo}
+
+	</update>
+
+	<delete id="deleteBn">
+		DELETE FROM BID_NOTICE
+		WHERE BN_NO = #{bnNo}
+	</delete>
+
+	<update id="updateBnStatus" parameterType="bidNoticeVO">
+		UPDATE BID_NOTICE
+		SET
+		BN_STATUS = #{bnStatus,jdbcType=VARCHAR}
+		WHERE
+		BN_NO = #{bnNo}
+	</update>
+
+</mapper>

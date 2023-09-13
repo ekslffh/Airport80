@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.accounting.salary.dao.SalaryDAO">
+
+
+	<resultMap id="salaryResultMap" type="SalaryVO" autoMapping="true">
+		<id property="salId" column="sal_id" />
+		<association property="emp" javaType="EmployeeVO" autoMapping="true" />
+	</resultMap>
+	
+	<select id="getAllSalList" resultMap="salaryResultMap">
+		SELECT
+		S.SAL_ID,
+		S.SAL_BASIC,
+		S.SAL_BNS,
+		S.SAL_EXTR,
+		S.SAL_OVERTIME,
+		S.SAL_TOTAL,
+		S.SAL_MEMO,
+		S.SAL_PAY_DT,
+		S.SAL_CRT_TS,
+		S.EMP_EMP_NO,
+		S.SAL_EMP_NO,
+		S.SAL_EMP_NM,
+		S.SAL_ACCNUM,
+		S.SAL_ACCBANK,
+		E.EMP_NO AS EMPNO,
+		E.EMP_NM AS EMPNM,
+		E.EMP_DEPT_NO AS EMPDEPTNO,
+		E.EMP_ROLE_NM AS EMPROLENM,
+		E.EMP_JOIN_DT AS EMPJOINDT,
+		D.DEPT_NM AS DEPTNM
+		FROM
+		SALARY S
+		INNER JOIN
+		EMPLOYEE E ON S.EMP_EMP_NO = E.EMP_NO
+		INNER JOIN
+		DEPARTMENT D ON E.EMP_DEPT_NO = D.DEPT_NO
+		ORDER BY S.SAL_CRT_TS DESC
+	</select>
+	
+	<select id="getEmpSalList" resultMap="salaryResultMap">
+		SELECT
+		S.SAL_ID,
+		S.SAL_BASIC,
+		S.SAL_BNS,
+		S.SAL_EXTR,
+		S.SAL_OVERTIME,
+		S.SAL_TOTAL,
+		S.SAL_MEMO,
+		S.SAL_PAY_DT,
+		S.SAL_CRT_TS,
+		S.EMP_EMP_NO,
+		S.SAL_EMP_NO,
+		S.SAL_EMP_NM,
+		S.SAL_ACCNUM,
+		S.SAL_ACCBANK,
+		E.EMP_NO AS EMPNO,
+		E.EMP_NM AS EMPNM,
+		E.EMP_CONTACT AS EMPCONTACT,
+		E.EMP_DEPT_NO AS EMPDEPTNO,
+		E.EMP_ROLE_NM AS EMPROLENM,
+		E.EMP_JOIN_DT AS EMPJOINDT,
+		D.DEPT_NM AS DEPTNM
+		FROM
+		SALARY S
+		INNER JOIN
+		EMPLOYEE E ON S.EMP_EMP_NO = E.EMP_NO
+		INNER JOIN
+		DEPARTMENT D ON E.EMP_DEPT_NO = D.DEPT_NO
+		WHERE EMP_NO = #{emp.empNo}
+		ORDER BY S.SAL_CRT_TS DESC
+	</select>
+	
+	<select id="selectSal" resultMap="salaryResultMap">
+		SELECT
+		S.SAL_ID,
+		S.SAL_BASIC,
+		S.SAL_BNS,
+		S.SAL_EXTR,
+		S.SAL_OVERTIME,
+		S.SAL_TOTAL,
+		S.SAL_MEMO,
+		S.SAL_PAY_DT,
+		S.SAL_CRT_TS,
+		S.EMP_EMP_NO,
+		S.SAL_EMP_NO,
+		S.SAL_EMP_NM,
+		S.SAL_ACCNUM,
+		S.SAL_ACCBANK,
+		S.SAL_H_INS,
+ 	    S.SAL_N_PEN,
+        S.SAL_EMP_INS,
+        S.SAL_WORK_INS,
+        S.SAL_INS_COMPANY,
+		E.EMP_NO AS EMPNO,
+		E.EMP_NM AS EMPNM,
+		E.EMP_CONTACT AS EMPCONTACT,
+		E.EMP_DEPT_NO AS EMPDEPTNO,
+		E.EMP_ROLE_NM AS EMPROLENM,
+		E.EMP_JOIN_DT AS EMPJOINDT,
+		D.DEPT_NM AS DEPTNM
+		FROM
+		SALARY S
+		INNER JOIN
+		EMPLOYEE E ON S.EMP_EMP_NO = E.EMP_NO
+		INNER JOIN
+		DEPARTMENT D ON E.EMP_DEPT_NO = D.DEPT_NO
+		WHERE S.SAL_ID =#{salId}
+		ORDER BY S.SAL_CRT_TS DESC
+	</select>
+	
+	<select id="getAllEmpListSal">
+		SELECT
+	    EMP_NO
+	  , EMP_NM
+	  , EMP_BIR
+	  , EMP_GENDER
+	  , EMP_EMAIL
+	  , EMP_ADDR
+	  , EMP_CONTACT
+	  , EMP_STATUS
+	  , EMP_JOIN_DT
+	  , EMP_RESIGN_DT
+	  , EMP_CRT_DT
+	  , EMP_UPD_DT
+	  , EMP_DEPT_NO
+	  , EMP_ROLE_NM
+	  , EMP_CTR_FILE
+	  , EMP_TEAM
+	  , EMP_ACCNUM
+	  , EMP_EMAILPASS
+	  , EMP_ACCBANK
+		FROM
+	    EMPLOYEE
+	</select>
+	<select id="selectEmpSal" resultMap="salaryResultMap">
+		SELECT
+		S.SAL_ID,
+		S.SAL_BASIC,
+		S.SAL_BNS,
+		S.SAL_EXTR,
+		S.SAL_OVERTIME,
+		S.SAL_TOTAL,
+		S.SAL_MEMO,
+		S.SAL_PAY_DT,
+		S.SAL_CRT_TS,
+		S.EMP_EMP_NO,
+		S.SAL_EMP_NO,
+		S.SAL_EMP_NM,
+		S.SAL_ACCNUM,
+		S.SAL_ACCBANK,
+		S.SAL_H_INS,
+ 	    S.SAL_N_PEN,
+        S.SAL_EMP_INS,
+        S.SAL_WORK_INS,
+        S.SAL_INS_COMPANY,
+        E.EMP_CONTACT AS EMPCONTACT,
+        E.emp_resign_dt AS EMPRESIGNDT,
+        E.emp_addr AS EMPADDR,
+		E.EMP_NO AS EMPNO,
+		E.EMP_NM AS EMPNM,
+		E.EMP_DEPT_NO AS EMPDEPTNO,
+		E.EMP_ROLE_NM AS EMPROLENM,
+		E.EMP_JOIN_DT AS EMPJOINDT,
+		D.DEPT_NM AS DEPTNM
+		FROM
+		SALARY S
+		INNER JOIN
+		EMPLOYEE E ON S.EMP_EMP_NO = E.EMP_NO
+		INNER JOIN
+		DEPARTMENT D ON E.EMP_DEPT_NO = D.DEPT_NO
+		WHERE E.EMP_NO =#{empNo}
+		ORDER BY S.SAL_CRT_TS DESC
+	</select>
+
+	<update id="updateIns">
+
+    UPDATE SALARY
+    SET
+        SAL_H_INS = #{salHIns},
+        SAL_N_PEN = #{salNPen},
+        SAL_EMP_INS = #{salEmpIns},
+        SAL_WORK_INS = #{salWorkIns},
+        SAL_INS_COMPANY=#{salInsCompany}
+    WHERE
+        SAL_ID = #{salId}
+	</update>
+	
+	<update id="updateSal">
+	
+    UPDATE SALARY
+    SET
+        SAL_MEMO = #{salMemo},
+        SAL_PAY_DT = SYSTIMESTAMP
+    WHERE
+        SAL_ID = #{salId}
+        
+	</update>
+	
+<insert id="insertSal" parameterType="java.util.List">
+    <selectKey keyProperty="salId" resultType="String" order="BEFORE">
+        SELECT SALARY_SEQ.NEXTVAL AS bgRId FROM DUAL
+    </selectKey>
+    INSERT INTO SALARY (
+        SAL_ID,
+        SAL_BASIC,
+        SAL_EXTR,
+        SAL_BNS,
+        SAL_OVERTIME,
+        SAL_CRT_TS,
+        SAL_TOTAL,
+        EMP_EMP_NO,
+        SAL_EMP_NO,
+        SAL_EMP_NM,
+        SAL_ACCNUM,
+        SAL_ACCBANK,
+        sal_h_ins,
+   	    sal_n_pen,
+        sal_emp_ins,
+        sal_work_ins,
+        sal_ins_company
+    )
+    VALUES
+        (
+        #{salId},
+        #{salBasic},
+        #{salExtr},
+        #{salBns},
+        #{salOvertime},
+        SYSDATE,
+        #{salTotal},
+        #{empEmpNo},
+        #{salEmpNo},
+        #{salEmpNm},
+        #{salAccNum},
+        #{salAccBank},
+        #{salHIns},
+        #{salNPen},
+        #{salEmpIns},
+        #{salWorkIns},
+        #{salInsCompany}
+        )
+       
+</insert>
+
+</mapper>

@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.common.requestList.dao.RequestListDAO">
+
+	<select id="getAllCnt">
+		SELECT
+		    (SELECT COUNT(*) FROM (
+		        SELECT 1 FROM SECURITY_REQ
+		        WHERE SR_REQ_MEM = #{empNo} AND SR_STATUS = 'REQ'
+		        UNION ALL
+		        SELECT 1 FROM RNC_REQ
+		        WHERE RR_ACC = #{empNo} AND RR_STTS = 'WT'
+		        UNION ALL
+		        SELECT 1 FROM BUDGET_REQ
+		        WHERE EMP_EMP_NO = #{empNo} AND BG_R_STATUS = '승인대기'
+		    )) AS "requestCnt",
+		    (SELECT COUNT(*) FROM (
+		        SELECT 1 FROM SECURITY_REQ
+		        WHERE SR_REQ_MEM = #{empNo} AND SR_STATUS = 'RES'
+		        UNION ALL
+		        SELECT 1 FROM RNC_REQ
+		        WHERE RR_ACC = #{empNo} AND (RR_STTS = 'PG' OR RR_STTS = 'DL')
+		    )) AS "processCnt",
+		    (SELECT COUNT(*) FROM (
+		        SELECT 1 FROM SECURITY_REQ
+		        WHERE SR_REQ_MEM = #{empNo} AND SR_STATUS = 'COMP'
+		        UNION ALL
+		        SELECT 1 FROM RNC_REQ
+		        WHERE RR_ACC = #{empNo} AND (RR_STTS = 'PC' OR RR_STTS = 'WO')
+		        UNION ALL
+		        SELECT 1 FROM BUDGET_REQ
+		        WHERE EMP_EMP_NO = #{empNo} AND BG_R_STATUS = '승인완료'
+		    )) AS "completeCnt",
+		    (SELECT COUNT(*) FROM (
+		        SELECT 1 FROM RNC_REQ
+		        WHERE RR_ACC = #{empNo} AND RR_STTS = 'CP' 
+		        UNION ALL
+		        SELECT 1 FROM BUDGET_REQ
+		        WHERE EMP_EMP_NO = #{empNo} AND BG_R_STATUS = '반려'
+		    )) AS "rejectCnt"
+		FROM DUAL
+	</select>
+	
+
+	<sql id="searchFrag">
+		<where>
+			<if	test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'content'">
+						(INSTR(reqCont, #{simpleCondition.searchWord}) > 0)
+					</when>
+					<when test="simpleCondition.searchType eq 'reqId'">
+						(OR INSTR(reqId, #{simpleCondition.searchWord}) > 0)
+					</when>
+					<otherwise>
+					   (INSTR(reqCont, #{simpleCondition.searchWord}) > 0
+						or
+						INSTR(reqId, #{simpleCondition.searchWord}) > 0)
+					</otherwise>
+				</choose>
+			</if>
+			<if test="simpleCondition.startDate != null">
+				AND reqTs &gt;= #{simpleCondition.startDate, jdbcType=DATE}
+			</if>
+			<if test="simpleCondition.endDate != null">
+				AND reqTs &lt;= #{simpleCondition.endDate, jdbcType=DATE} 
+			</if>
+		</where>
+	</sql>
+
+
+	<!-- 페이징 위해 총 갯수 계산 -->
+	<select id="selectTotalRecord" resultType="long" parameterType="PaginationInfo">
+		select COUNT(*) FROM (
+		(SELECT
+		SR_ID AS reqId,
+		'보안지원' AS reqCtgr,
+		SR_CONTENT AS reqCont,
+		ZONE_FLOOR AS reqFloor,
+		ZONE_CTGR AS reqLo,
+		SR_TS AS reqTs,
+		EMP_NM AS reqWriter,
+		CODE_NM AS reqStatus
+		FROM SECURITY_REQ
+	
+		LEFT OUTER JOIN COMMON_CODE
+		ON SR_STATUS = CODE_ID
+		LEFT OUTER JOIN ZONE
+		ON SR_LOC = ZONE_CD
+		LEFT OUTER JOIN EMPLOYEE
+		ON SR_REQ_MEM = EMP_NO
+		WHERE
+		SR_REQ_MEM = #{reqWriter, jdbcType=VARCHAR}
+		<if test="simpleCondition.secReqStatus != null and simpleCondition.secReqStatus  != ''">
+			AND	CODE_ID = #{simpleCondition.secReqStatus, jdbcType=VARCHAR}
+		</if>
+		)
+	
+		UNION ALL
+	
+		(SELECT
+		RR_ID AS reqId,
+		'수리청소' AS reqCtgr,
+		RR_CONTENT AS reqCont,
+		ZONE_FLOOR AS reqFloor,
+		ZONE_CTGR AS reqLo,
+		RR_TS AS reqTs,
+		EMP_NM AS reqWriter,
+		CODE_NM AS reqStatus
+		FROM RNC_REQ
+		LEFT OUTER JOIN COMMON_CODE
+		ON RR_STTS = CODE_ID
+		LEFT OUTER JOIN ZONE
+		ON RR_LOC = ZONE_CD
+		LEFT OUTER JOIN EMPLOYEE
+		ON RR_ACC = EMP_NO
+		WHERE
+		RR_ACC = #{reqWriter, jdbcType=VARCHAR}
+		
+		<!-- 둘다 되는 경우 -->
+		<if test="(simpleCondition.rncReqStatus1 != null and simpleCondition.rncReqStatus1 != '') and (simpleCondition.rncReqStatus2 != null and simpleCondition.rncReqStatus2 != '')">
+			AND (CODE_ID = #{simpleCondition.rncReqStatus1} OR CODE_ID = #{simpleCondition.rncReqStatus2, jdbcType=VARCHAR}) AND 1=1
+		</if>
+		<!-- 1만 되는 경우 -->
+		<if test="(simpleCondition.rncReqStatus1 != null and simpleCondition.rncReqStatus1 != '') and !(simpleCondition.rncReqStatus2 != null and simpleCondition.rncReqStatus2 != '')">
+			AND CODE_ID = #{simpleCondition.rncReqStatus1, jdbcType=VARCHAR} AND 2=2
+		</if>
+		<!-- 2만 되는 경우 -->
+		<if test="!(simpleCondition.rncReqStatus1 != null and simpleCondition.rncReqStatus1 != '') and (simpleCondition.rncReqStatus2 != null and simpleCondition.rncReqStatus2 != '')">
+			AND CODE_ID = #{simpleCondition.rncReqStatus1, jdbcType=VARCHAR} AND 3=3
+		</if>
+		)
+		
+		<if test="simpleCondition.secReqStatus != 'RES'">
+			UNION ALL
+			(
+			SELECT
+			BG_R_ID AS reqId,
+			'추가예산' AS reqCtgr,
+			BG_R_RSN AS reqCont,
+			NULL AS reqFloor,
+			TO_CHAR(BG_R_AMT) AS reqLo,
+			BG_R_TS AS reqTs,
+			EMP_NM AS reqWriter,
+			BG_R_STATUS AS reqStatus
+			FROM BUDGET_REQ
+			LEFT OUTER JOIN EMPLOYEE
+			ON EMP_EMP_NO = EMP_NO
+			WHERE
+			EMP_EMP_NO = #{reqWriter}
+			<if test="simpleCondition.budReqStatus != null and simpleCondition.budReqStatus  != ''">
+				AND	BG_R_STATUS = #{simpleCondition.budReqStatus, jdbcType=VARCHAR}
+			</if>
+			)
+		</if>
+	)
+	<where>
+		<if
+			test="simpleCondition.reqCtgr != null and simpleCondition.reqCtgr  != ''">
+			reqCtgr = #{simpleCondition.reqCtgr, jdbcType=VARCHAR}
+		</if>
+	</where>
+	<include refid="searchFrag" />
+	ORDER BY
+	reqTs DESC
+	</select>
+
+
+
+	<!-- 전체요청목록 리스트출력 -->
+	<select id="selectRequestList" resultType="RequestListVO">
+		SELECT B.*
+		FROM(
+		SELECT ROWNUM RNUM, A.*
+		FROM(
+		SELECT *FROM (
+	
+		
+		<if test="simpleCondition.rncReqStatus1 != 'CP'">
+			(
+			SELECT
+			SR_ID AS reqId,
+			'보안지원' AS reqCtgr,
+			SR_CONTENT AS reqCont,
+			ZONE_FLOOR AS reqFloor,
+			ZONE_CTGR AS reqLo,
+			SR_TS AS reqTs,
+			EMP_NM AS reqWriter,
+			CODE_NM AS reqStatus
+			FROM SECURITY_REQ
+		
+			LEFT OUTER JOIN COMMON_CODE
+			ON SR_STATUS = CODE_ID
+			LEFT OUTER JOIN ZONE
+			ON SR_LOC = ZONE_CD
+			LEFT OUTER JOIN EMPLOYEE
+			ON SR_REQ_MEM = EMP_NO
+			WHERE
+			SR_REQ_MEM = #{reqWriter, jdbcType=VARCHAR}
+			<if
+				test="simpleCondition.secReqStatus != null and simpleCondition.secReqStatus  != ''">
+				AND CODE_ID = #{simpleCondition.secReqStatus, jdbcType=VARCHAR}
+			</if>
+			)
+		UNION ALL
+		</if>
+	
+		(SELECT
+		RR_ID AS reqId,
+		'수리청소' AS reqCtgr,
+		RR_CONTENT AS reqCont,
+		ZONE_FLOOR AS reqFloor,
+		ZONE_CTGR AS reqLo,
+		RR_TS AS reqTs,
+		EMP_NM AS reqWriter,
+		CODE_NM AS reqStatus
+		FROM RNC_REQ
+		LEFT OUTER JOIN COMMON_CODE
+		ON RR_STTS = CODE_ID
+		LEFT OUTER JOIN ZONE
+		ON RR_LOC = ZONE_CD
+		LEFT OUTER JOIN EMPLOYEE
+		ON RR_ACC = EMP_NO
+		WHERE
+		RR_ACC = #{reqWriter, jdbcType=VARCHAR}
+	
+		<!-- 둘다 되는 경우 -->
+		<if
+			test="(simpleCondition.rncReqStatus1 != null and simpleCondition.rncReqStatus1 != '') and (simpleCondition.rncReqStatus2 != null and simpleCondition.rncReqStatus2 != '')">
+			AND (CODE_ID = #{simpleCondition.rncReqStatus1} OR CODE_ID =
+			#{simpleCondition.rncReqStatus2, jdbcType=VARCHAR}) AND 1=1
+		</if>
+		<!-- 1만 되는 경우 -->
+		<if
+			test="(simpleCondition.rncReqStatus1 != null and simpleCondition.rncReqStatus1 != '') and !(simpleCondition.rncReqStatus2 != null and simpleCondition.rncReqStatus2 != '')">
+			AND CODE_ID = #{simpleCondition.rncReqStatus1, jdbcType=VARCHAR} AND 2=2
+		</if>
+		<!-- 2만 되는 경우 -->
+		<if
+			test="!(simpleCondition.rncReqStatus1 != null and simpleCondition.rncReqStatus1 != '') and (simpleCondition.rncReqStatus2 != null and simpleCondition.rncReqStatus2 != '')">
+			AND CODE_ID = #{simpleCondition.rncReqStatus1, jdbcType=VARCHAR} AND 3=3
+		</if>
+		)
+	
+		<if test="simpleCondition.secReqStatus != 'RES'">
+			UNION ALL
+			(
+			SELECT
+			BG_R_ID AS reqId,
+			'추가예산' AS reqCtgr,
+			BG_R_RSN AS reqCont,
+			NULL AS reqFloor,
+			TO_CHAR(BG_R_AMT) AS reqLo,
+			BG_R_TS AS reqTs,
+			EMP_NM AS reqWriter,
+			BG_R_STATUS AS reqStatus
+			FROM BUDGET_REQ
+			LEFT OUTER JOIN EMPLOYEE
+			ON EMP_EMP_NO = EMP_NO
+			WHERE
+			EMP_EMP_NO = #{reqWriter}
+			<if
+				test="simpleCondition.budReqStatus != null and simpleCondition.budReqStatus  != ''">
+				AND BG_R_STATUS = #{simpleCondition.budReqStatus, jdbcType=VARCHAR}
+			</if>
+			)
+		</if>
+		)
+		<where>
+			<if
+				test="simpleCondition.reqCtgr != null and simpleCondition.reqCtgr  != ''">
+				reqCtgr = #{simpleCondition.reqCtgr, jdbcType=VARCHAR}
+			</if>
+		</where>
+		<include refid="searchFrag" />
+		ORDER BY
+		reqTs DESC
+		) A
+	)B
+	         <![CDATA[ 
+	  		  WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	    	]]>
+	</select>
+	
+	
+	<select id="allCount" resultType="long">
+	select COUNT(*) FROM (
+		(SELECT
+			SR_ID AS reqId,
+			'보안지원' AS reqCtgr,
+			SR_CONTENT AS reqCont,
+			ZONE_FLOOR AS reqFloor,
+			ZONE_CTGR AS reqLo,
+			SR_TS AS reqTs,
+			EMP_NM AS reqWriter,
+			CODE_NM AS reqStatus
+			FROM SECURITY_REQ
+		
+			LEFT OUTER JOIN COMMON_CODE
+			ON SR_STATUS = CODE_ID
+			LEFT OUTER JOIN ZONE
+			ON SR_LOC = ZONE_CD
+			LEFT OUTER JOIN EMPLOYEE
+			ON SR_REQ_MEM = EMP_NO
+			WHERE
+			SR_REQ_MEM = #{empNo}
+	
+			)
+		
+			UNION ALL
+		
+			(SELECT
+			RR_ID AS reqId,
+			'수리청소' AS reqCtgr,
+			RR_CONTENT AS reqCont,
+			ZONE_FLOOR AS reqFloor,
+			ZONE_CTGR AS reqLo,
+			RR_TS AS reqTs,
+			EMP_NM AS reqWriter,
+			CODE_NM AS reqStatus
+			FROM RNC_REQ
+			LEFT OUTER JOIN COMMON_CODE
+			ON RR_STTS = CODE_ID
+			LEFT OUTER JOIN ZONE
+			ON RR_LOC = ZONE_CD
+			LEFT OUTER JOIN EMPLOYEE
+			ON RR_ACC = EMP_NO
+			WHERE
+			RR_ACC = #{empNo}
+			)
+			UNION ALL
+	        (
+	        SELECT
+	        BG_R_ID AS reqId,
+	        '추가예산' AS reqCtgr,
+	        BG_R_RSN AS reqCont,
+	        NULL AS reqFloor,
+	        TO_CHAR(BG_R_AMT) AS reqLo,
+	        BG_R_TS AS reqTs,
+	        EMP_NM AS reqWriter,
+	        BG_R_STATUS AS reqStatus
+	        FROM BUDGET_REQ
+	        LEFT OUTER JOIN EMPLOYEE
+	        ON EMP_EMP_NO = EMP_NO
+	        WHERE
+	        EMP_EMP_NO = #{empNo} )
+        )
+	
+	</select>
+	
+</mapper>

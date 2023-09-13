@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.accounting.accounting.dao.AccountingDAO">
+
+	<select id="selectListByEmp">
+		SELECT
+		    ACC_ID, ACC_USE_TS, ACC_TYPE
+		    , ACC_AMT, ACC_MEMO, ACC_DEL
+		    , ACC_STATUS, ACC_RES_RSON, ACC_IMG
+		    , ACC_CRT_TS, ACC_UPD_TS, ACC_WRITER
+		    , ACC_LEADER, ACC_BUD_ID, ACC_ACA_ID
+		FROM
+		    ACCOUNTING
+        WHERE ACC_WRITER = #{empNo} WHERE ACC_DEL IS NULL
+        ORDER BY ACC_USE_TS DESC
+	</select>
+	
+	<resultMap type="AccountingVO" id="accMap" autoMapping="true">
+		<id property="accId" column="ACC_ID" />
+		<association property="category" javaType="AccountCategoryVO" autoMapping="true" />
+		<association property="writer" javaType="EmployeeVO" autoMapping="true" />
+		<association property="fileGroup" javaType="AtchFileVO">
+			<id property="atchFileId" column="ATCH_FILE_ID" />
+			<result property="creatDt" column="CREAT_DT" />
+			<result property="useAt" column="USE_AT" />
+			<collection property="detailList" ofType="AtchFileDetailVO" autoMapping="true">
+				<id property="atchFileId" column="ATCH_FILE_ID" />
+				<id property="fiSn" column="FI_SN" />
+			</collection>
+		</association>
+	</resultMap>
+	
+	<select id="selectList" parameterType="BudgetVO" resultMap="accMap">
+		WITH ATCH_FILE_VIEW AS(
+		    SELECT *
+		    FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL 
+		            USING (ATCH_FILE_ID)
+		)
+		SELECT
+		    ACC_ID, ACC_USE_TS, ACC_TYPE
+		    , ACC_AMT, ACC_MEMO, ACC_DEL
+		    , ACC_STATUS, ACC_RES_RSON, ACC_IMG
+		    , ACC_CRT_TS, ACC_UPD_TS, ACC_WRITER
+		    , ACC_LEADER, ACC_BUD_ID, ACC_ACA_ID
+		    , ATCH_FILE_ID, FI_SN, FI_COURS
+		    , FI_EXTSN, FI_ORIGIN_NM, FI_NM
+		    , FI_SIZE, FI_MIME
+		    , EMP_NM, ACA_NM
+		FROM
+		    ACCOUNTING
+		INNER JOIN EMPLOYEE ON (ACC_WRITER = EMP_NO)
+		INNER JOIN ACCOUNT_CATEGORY ON (ACC_ACA_ID = ACA_ID)
+		LEFT OUTER JOIN ATCH_FILE_VIEW ON (ACC_IMG = ATCH_FILE_ID)
+        WHERE 
+        	ACC_BUD_ID IN (SELECT BUD_ID FROM BUDGET WHERE BUD_YEAR = #{budYear})
+        AND
+        	ACC_DEL IS NULL
+        ORDER BY ACC_USE_TS DESC
+	</select>
+	
+	<select id="selectListByDept" parameterType="BudgetVO" resultMap="accMap">
+		WITH ATCH_FILE_VIEW AS(
+		    SELECT *
+		    FROM ATCH_FILE INNER JOIN ATCH_FILE_DETAIL 
+		            USING (ATCH_FILE_ID)
+		)
+		SELECT
+		    ACC_ID, ACC_USE_TS, ACC_TYPE
+		    , ACC_AMT, ACC_MEMO, ACC_DEL
+		    , ACC_STATUS, ACC_RES_RSON, ACC_IMG
+		    , ACC_CRT_TS, ACC_UPD_TS, ACC_WRITER
+		    , ACC_LEADER, ACC_BUD_ID, ACC_ACA_ID
+		    , ATCH_FILE_ID, FI_SN, FI_COURS
+		    , FI_EXTSN, FI_ORIGIN_NM, FI_NM
+		    , FI_SIZE, FI_MIME
+		    , EMP_NM, ACA_NM
+		FROM
+		    ACCOUNTING
+		INNER JOIN EMPLOYEE ON (ACC_WRITER = EMP_NO)
+		INNER JOIN ACCOUNT_CATEGORY ON (ACC_ACA_ID = ACA_ID)
+		LEFT OUTER JOIN ATCH_FILE_VIEW ON (ACC_IMG = ATCH_FILE_ID)
+        WHERE 
+        	ACC_BUD_ID IN (SELECT BUD_ID FROM BUDGET WHERE DEPT_NO = #{deptNo} AND BUD_YEAR = #{budYear})
+        AND
+        	ACC_DEL IS NULL
+        ORDER BY ACC_USE_TS DESC
+    </select>
+	
+	<select id="selectOne">
+		SELECT
+		    ACC_ID, ACC_USE_TS, ACC_TYPE
+		    , ACC_AMT, ACC_MEMO, ACC_DEL
+		    , ACC_STATUS, ACC_RES_RSON, ACC_IMG
+		    , ACC_CRT_TS, ACC_UPD_TS, ACC_WRITER
+		    , ACC_LEADER, ACC_BUD_ID, ACC_ACA_ID
+		FROM
+		    ACCOUNTING
+		WHERE
+			ACC_ID = #{accId}
+		AND 
+			ACC_DEL IS NULL
+	</select>
+	
+	<resultMap type="kr.or.ddit.accounting.accounting.vo.AmountCategoryVO" id="amountByCategoryMap">
+		<id property="id" column="ACC_ACA_ID" />
+		<result property="name" column="ACA_NM" />
+		<result property="amt" column="TOTAL_AMT" />
+	</resultMap>
+	
+	<select id="getAmountByCategoryAndQrt" parameterType="BudgetVO" resultMap="amountByCategoryMap">
+		SELECT
+		    ACC_ACA_ID, ACA_NM
+		    , SUM(ACC_AMT) AS TOTAL_AMT
+		FROM
+		    ACCOUNTING
+		INNER JOIN ACCOUNT_CATEGORY ON (ACC_ACA_ID = ACA_ID)
+		WHERE 
+		    ACC_BUD_ID = (SELECT BUD_ID FROM BUDGET WHERE DEPT_NO = #{deptNo} AND BUD_YEAR = #{budYear} AND BUD_QUARTER = #{budQuarter})
+	        AND ACC_TYPE = '지출'    
+		    AND ACC_DEL IS NULL
+		GROUP BY
+		    ACC_ACA_ID, ACA_NM
+		ORDER BY
+		    TOTAL_AMT DESC
+	</select>
+	
+	<select id="getAmountByMonth" parameterType="BudgetVO" resultType="kr.or.ddit.accounting.accounting.vo.AmountMonthVO">
+		SELECT
+		    Months.Month AS MONTH,
+		    NVL(SUM(CASE WHEN ACC_TYPE = '수입' THEN ACC_AMT ELSE 0 END), 0) AS INCOME,
+		    NVL(SUM(CASE WHEN ACC_TYPE = '지출' THEN ACC_AMT ELSE 0 END), 0) AS EXPENSE
+		FROM (
+		    SELECT LEVEL AS Month
+		    FROM DUAL
+    		<![CDATA[
+		    CONNECT BY LEVEL <= 12
+    		]]>
+		) Months
+		LEFT JOIN (
+		    SELECT
+		        EXTRACT(MONTH FROM ACC_USE_TS) AS Month,
+		        ACC_TYPE,
+		        ACC_AMT
+		    FROM
+		        ACCOUNTING
+		    WHERE 
+		        ACC_BUD_ID IN (SELECT BUD_ID FROM BUDGET WHERE DEPT_NO = #{deptNo} AND BUD_YEAR = #{budYear})
+		        AND
+		        ACC_DEL IS NULL
+		) AccountingData ON Months.Month = AccountingData.Month
+		GROUP BY
+		    Months.Month
+		ORDER BY
+		    Months.Month
+	</select>
+	
+	<insert id="insert" parameterType="AccountingVO">
+		INSERT INTO ACCOUNTING (
+		    ACC_ID, ACC_USE_TS, ACC_TYPE
+		    , ACC_AMT, ACC_MEMO
+		    , ACC_STATUS, ACC_IMG
+		    , ACC_CRT_TS, ACC_UPD_TS, ACC_WRITER
+		    , ACC_LEADER, ACC_BUD_ID, ACC_ACA_ID
+		) VALUES (
+		  	#{accId,jdbcType=VARCHAR}
+			, #{accUseTs,jdbcType=TIMESTAMP}
+			, #{accType,jdbcType=VARCHAR}
+			, #{accAmt,jdbcType=NUMERIC}
+			, #{accMemo,jdbcType=VARCHAR}
+			, 'APP'
+			, #{accImg,jdbcType=VARCHAR}
+			, SYSTIMESTAMP
+			, SYSTIMESTAMP
+			, #{accWriter,jdbcType=CHAR}
+			, #{accLeader,jdbcType=CHAR}
+			, #{accBudId,jdbcType=VARCHAR}
+			, #{accAcaId,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE ACCOUNTING
+		SET
+		    ACC_USE_TS = #{accUseTs, jdbcType=TIMESTAMP}
+		    , ACC_TYPE = #{accType, jdbcType=VARCHAR}
+		    , ACC_AMT = #{accAmt, jdbcType=NUMERIC}
+		    , ACC_MEMO = #{accMemo, jdbcType=VARCHAR}
+		    , ACC_STATUS = 'APP'
+		    , ACC_RES_RSON = #{accResRson, jdbcType=VARCHAR}
+		    , ACC_IMG = #{accImg, jdbcType=VARCHAR}
+		    , ACC_UPD_TS = SYSTIMESTAMP
+		    , ACC_WRITER = #{accWriter, jdbcType=CHAR}
+		    , ACC_LEADER = #{accLeader, jdbcType=CHAR}
+		    , ACC_BUD_ID = #{accBudId, jdbcType=VARCHAR}
+		    , ACC_ACA_ID = #{accAcaId, jdbcType=VARCHAR}
+		WHERE
+		    ACC_ID = #{accId, jdbcType=VARCHAR}
+	</update>
+	
+	<delete id="delete">
+		UPDATE ACCOUNTING
+		SET
+		    ACC_DEL = 'Y'
+		WHERE
+		    ACC_ID = #{accId, jdbcType=VARCHAR}
+	</delete>
+	
+</mapper>

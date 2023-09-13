@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.common.chat.dao.ChatRoomMsgDAO">
+
+	<resultMap type="ChatRoomMsgVO" id="chatRoomMsgMap" autoMapping="true">
+		<id property="crmId" column="CRM_ID" />
+		<association property="employee" javaType="EmployeeVO" autoMapping="true" />
+	</resultMap>
+
+	<select id="selectListByChatRoom" resultMap="chatRoomMsgMap">
+		SELECT
+		CRM_ID,
+		CRM_CONTENT,
+		CRM_CRT_TS,
+		CHR_ID,
+		CR.EMP_NO,
+		EMP_NM,
+		(
+		SELECT
+			(SELECT COUNT(*) FROM CHAT_ROOM_MEMBER WHERE CHR_ID = CR.CHR_ID) 
+			-
+			(SELECT COUNT(*) FROM CHAT_READ_STATUS WHERE CRS_MSG_ID = CR.CRM_ID AND
+				CRS_EMP_NO IN (SELECT EMP_NO FROM CHAT_ROOM_MEMBER WHERE CHR_ID = CR.CHR_ID))
+		FROM DUAL
+		) AS UNREAD_CNT
+		FROM CHAT_ROOM_MSG CR
+		INNER JOIN EMPLOYEE E ON CR.EMP_NO = E.EMP_NO
+		WHERE CR.CHR_ID = #{chrId}
+		ORDER BY CRM_CRT_TS
+	</select>
+	
+	<select id="selectLastMessageList">
+		SELECT *
+		FROM (
+		    SELECT *
+		    FROM CHAT_ROOM_MSG
+		    WHERE CHR_ID = #{chrId}
+		    ORDER BY CRM_CRT_TS DESC
+		)
+		WHERE ROWNUM = 1
+	</select>
+	
+	<select id="countUnreadListByMember" parameterType="string" resultType="int">
+		SELECT COUNT(*) FROM CHAT_ROOM_MSG 
+		WHERE 
+		    CHR_ID IN (SELECT CHR_ID FROM CHAT_ROOM_MEMBER WHERE EMP_NO = #{empNo})
+		    AND 
+		    CRM_ID NOT IN (SELECT CRS_MSG_ID FROM CHAT_READ_STATUS WHERE CRS_EMP_NO = #{empNo})
+	</select>
+	
+	<select id="countUnreadListByMemberAndChat" parameterType="ChatRoomMemberVO" resultType="int">
+		SELECT COUNT(*) FROM CHAT_ROOM_MSG 
+		WHERE 
+		    CHR_ID IN (SELECT CHR_ID FROM CHAT_ROOM_MEMBER WHERE EMP_NO = #{empNo})
+		    AND
+		    CRM_ID NOT IN 
+		    (SELECT CRS_MSG_ID FROM CHAT_READ_STATUS WHERE CRS_EMP_NO = #{empNo})
+		    AND
+		    CHR_ID = #{chrId}
+	</select>
+	
+	<select id="selectUnreadListByMemberAndChat">
+		SELECT * FROM CHAT_ROOM_MSG 
+		WHERE 
+		    CHR_ID IN (SELECT CHR_ID FROM CHAT_ROOM_MEMBER WHERE EMP_NO = #{empNo})
+		    AND
+		    CRM_ID NOT IN 
+		    (SELECT CRS_MSG_ID FROM CHAT_READ_STATUS WHERE CRS_EMP_NO = #{empNo})
+		    AND
+		    CHR_ID = #{chrId}
+	</select>
+	
+	<insert id="insertMessage" parameterType="ChatRoomMsgVO">
+		INSERT INTO CHAT_ROOM_MSG (
+		    CRM_ID, CRM_CONTENT, CHR_ID, EMP_NO, CRM_CRT_TS
+		) VALUES (
+			#{crmId,jdbcType=VARCHAR}
+			, #{crmContent,jdbcType=VARCHAR}
+			, #{chrId,jdbcType=VARCHAR}
+			, #{empNo,jdbcType=CHAR}
+			, #{crmCrtTs,jdbcType=TIMESTAMP}
+		)
+	</insert>
+	
+	<delete id="deleteMessage">
+		DELETE FROM CHAT_ROOM_MSG
+		WHERE CRM_ID = #{crmId}
+	</delete>
+	
+</mapper>

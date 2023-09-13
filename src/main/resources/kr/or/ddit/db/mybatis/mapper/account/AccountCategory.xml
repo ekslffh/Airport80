@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.accounting.accountcategory.dao.AccountCategoryDAO">
+
+
+	<sql id="searchFrag">
+		<where>
+			<if
+				test="simpleCondition neq null and simpleCondition.
+        				searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'id'">
+						INSTR(aca_id, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'name'">
+						INSTR(aca_nm, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'info'">
+						INSTR(aca_info, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(aca_id, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(aca_nm, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(aca_info, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="PaginationInfo">
+		SELECT COUNT(*)
+		FROM account_category
+		<include refid="searchFrag" />
+	</select>
+
+	<select id="getAllAccountCategoriesList"
+		resultType="AccountCategoryVO">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM (
+		SELECT
+		aca_id,
+		aca_nm,
+		aca_crt_dt,
+		aca_del,
+		aca_info
+		FROM account_category
+		<include refid="searchFrag" />
+		ORDER BY aca_id DESC
+		) A
+		) B
+		<![CDATA[   
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+
+	<select id="getAllAccountCategoriesListSimple"
+		resultType="AccountCategoryVO">
+		SELECT
+		ACA_ID, ACA_NM, ACA_CRT_DT, ACA_INFO
+		FROM ACCOUNT_CATEGORY
+		WHERE ACA_DEL = 'N'
+	</select>
+
+	<select id="getAccountCategoryById" parameterType="String"
+		resultType="AccountCategoryVO">
+		SELECT aca_id,
+		aca_nm,
+		aca_crt_dt,
+		aca_del,
+		aca_info
+		FROM account_category WHERE aca_id = #{acaId}
+	</select>
+
+	<insert id="insertAccountCategory"
+		parameterType="AccountCategoryVO">
+		<selectKey keyProperty="acaId" resultType="String"
+			order="BEFORE">
+			SELECT CONCAT('ACA', LPAD(ACA_sequence.nextval, 3, '0')) AS acaId FROM DUAL
+		</selectKey>
+		INSERT INTO account_category (aca_id, aca_nm, aca_crt_dt, aca_del,
+		aca_info)
+		VALUES (#{acaId}, #{acaNm}, SYSDATE, 'N', #{acaInfo})
+	</insert>
+
+
+	<update id="updateAccountCategory"
+		parameterType="AccountCategoryVO">
+		UPDATE account_category
+		SET aca_nm = #{acaNm},
+		aca_crt_dt = #{acaCrtDt},
+		aca_del = #{acaDel}
+		WHERE aca_id = #{acaId}
+	</update>
+
+	<delete id="deleteAccountCategory" parameterType="String">
+		DELETE FROM account_category WHERE aca_id = #{acaId}
+	</delete>
+
+	<!-- Add this inside your mapper XML file -->
+	<delete id="deleteMultipleAccountCategories"
+		parameterType="java.util.List">
+		DELETE FROM account_category WHERE aca_id IN
+		<foreach collection="list" item="accountId" open="("
+			separator="," close=")">
+			#{accountId}
+		</foreach>
+	</delete>
+
+
+
+</mapper>
