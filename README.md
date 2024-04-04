@@ -2,8 +2,8 @@
 공항관리시스템.
 
 ### 프로젝트 링크 정보
-[직원페이지 링크](http://localhost:8080/Airport80/in)
-[고객페이지 링크](http://localhost:8080/Airport80/index.do)
+- [직원페이지](http://localhost:8080/Airport80/in)
+- [고객페이지](http://localhost:8080/Airport80/index.do)
 
 ### 프로젝트관리
 [Airport:80 프로젝트 노션URL](https://brassy-door-6e8.notion.site/e8edf657a14e45da83904b9672f84a2d?v=7a344f955a8842dfa0c12e27d4d53f1c&pvs=4)
