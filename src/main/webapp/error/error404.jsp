@@ -88,13 +88,13 @@
         <h1><i class="bx bxs-hand"></i> 접근 오류</h1>
         <br>
         <h2>해당 페이지는 존재하지 않거나 접근이 허용되지 않았습니다.</h2>
-        <a class="btn" href="/Airport80">Back to home</a>
         <div class="credits">
           <!-- All the links in the footer should remain intact. -->
           <!-- You can delete the links only if you purchased the pro version. -->
           <!-- Licensing information: https://bootstrapmade.com/license/ -->
           <!-- Purchase the pro version with working PHP/AJAX contact form: https://bootstrapmade.com/nice-admin-bootstrap-admin-html-template/ -->
-          Designed by <a href="https://bootstrapmade.com/">BootstrapMade</a>
+          <a href="./in">직원페이지</a>
+          <a href="./index.do">고객페이지</a>
         </div>
       </section>
 
