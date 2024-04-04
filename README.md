@@ -1,5 +1,5 @@
 # Airport-80 (공항관리시스템)
-공항관리시스템
+공항관리시스템.
 
 ### 프로젝트관리
 https://brassy-door-6e8.notion.site/e8edf657a14e45da83904b9672f84a2d?v=7a344f955a8842dfa0c12e27d4d53f1c&pvs=4
