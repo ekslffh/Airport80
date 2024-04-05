@@ -7,10 +7,14 @@
 - [직원페이지](http://localhost:8080/Airport80/in)
 - [고객페이지](http://localhost:8080/Airport80/index.do)
 
+### 담당 구현 기능
+- [구현기능 정리파일.pdf](https://github.com/ekslffh/Airport80/files/14884832/airport-80.pdf)
+
 ### 프로젝트 관련 URL
 - [Airport:80 프로젝트 관리URL (notion)](https://brassy-door-6e8.notion.site/e8edf657a14e45da83904b9672f84a2d?v=7a344f955a8842dfa0c12e27d4d53f1c&pvs=4)
 - [ERD-CLOUD](https://www.erdcloud.com/d/xf4CAYwdFMTCQY7Tr)
 - [Airport80-최종발표](https://github.com/ekslffh/Airport-80/files/12593793/Airport80-.-.pptx)
+- [프로젝트 시연영상](https://drive.google.com/file/d/1luFoyrunWuPngbXO9HCzZpO_Ft-6Sexv/view)
 
 ### 프로젝트 소개
 - 공항 관리 프로그램  Airport:80 은 다양한 업무 상황과 각 부서 및 사무/현장 실무자 사이의 원활한 업무 협업 및 연계가 필요한 공항 내부라는 업무 환경에서의 그룹 웨어를 목표로 했습니다.  
