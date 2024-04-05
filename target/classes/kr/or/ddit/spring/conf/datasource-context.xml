@@ -10,6 +10,7 @@
 		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd">
 
 	<util:properties id="dbInfo" location="classpath:kr/or/ddit/db/dbInfo.properties" />
+		
 	<bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource" 
 		p:driverClassName="#{dbInfo.driverClassName}"
 		p:url="#{dbInfo.url}"

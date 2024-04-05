@@ -22,8 +22,8 @@
 	/>
 	 
 	<util:properties id="appInfo" location="classpath:kr/or/ddit/appInfo.properties" />
+	<util:properties id="apiInfo" location="classpath:kr/or/ddit/util/apiInfo.properties" />
 	
 	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver" />
 	
-
 </beans>

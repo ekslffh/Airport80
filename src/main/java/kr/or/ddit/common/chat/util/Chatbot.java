@@ -15,20 +15,24 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 public class Chatbot {
-
+	
     private String apiEndpoint;
+    
+	@Value("#{apiInfo.key}")
     private String apiKey;
 
     private List<Message> conversation;
     public Chatbot() {
         // API 엔드포인트 및 API 키 설정
         this.apiEndpoint = "https://api.openai.com/v1/chat/completions";
-        this.apiKey = "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";
+        // this.apiKey = "sk-Yy****";
         this.conversation = new ArrayList<>();
         conversation.add(new Message("system", "Airport:80은 인천공항을 모티브로 하는 공항 챗봇 서비스입니다."));
         conversation.add(new Message("system", "우리는 고객들에게 Airport:80 공항과 관련된 다양한 정보를 제공하고 도움을 드릴 준비가 되어 있습니다."));
