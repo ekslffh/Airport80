@@ -1,4 +1,12 @@
-const api_key = "5e072b84-d2a4-41c0-a5bb-c7eab93fbd02";
+
+/*
+airlabs flight api key 정보
+a51bc3cb-aabc-43d0-9272-b8a47154b445
+c2c06eef-aaed-4e82-8a02-4ab1140d0e43
+4c353860-cd54-4dec-bbbe-fe5b03be769f
+5e072b84-d2a4-41c0-a5bb-c7eab93fbd02
+*/
+const api_key = "a51bc3cb-aabc-43d0-9272-b8a47154b445";
 const api_base = "https://airlabs.co/api/v9/";
 
 function apiCall(method, params, cb) {
@@ -234,7 +242,7 @@ function createFlightTable(prevData, data) {
 
 flInterval(); // 먼저 한 번 실행하고
 
-setInterval(flInterval, 2000); // 5초마다 실행
+setInterval(flInterval, 5000); // 5초마다 실행
 }
 
 initMap();
